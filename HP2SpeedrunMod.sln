@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HP2SpeedrunMod", "HP2SpeedrunMod\HP2SpeedrunMod.csproj", "{72B103B2-38C0-4388-8466-2C24047B9C3F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{72B103B2-38C0-4388-8466-2C24047B9C3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72B103B2-38C0-4388-8466-2C24047B9C3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72B103B2-38C0-4388-8466-2C24047B9C3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72B103B2-38C0-4388-8466-2C24047B9C3F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {88A93DC9-D6E6-44FB-B603-B04FF324E0C9}
+	EndGlobalSection
+EndGlobal
