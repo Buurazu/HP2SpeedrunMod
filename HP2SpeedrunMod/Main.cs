@@ -21,7 +21,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.1.0";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -30,8 +30,10 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<Boolean> CensorshipEnabled { get; private set; }
         public static ConfigEntry<Boolean> ReturnToMenuEnabled { get; private set; }
         public static ConfigEntry<Boolean> CheatHotkeyEnabled { get; private set; }
+        public static ConfigEntry<Boolean> AllPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> MouseWheelEnabled { get; private set; }
         public static ConfigEntry<Boolean> InputModsEnabled { get; private set; }
+        public static ConfigEntry<int> AutoDeleteFile { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
         public static bool hasReturned = false;
@@ -46,27 +48,36 @@ namespace HP2SpeedrunMod
         public const int TWO = 2;
 
         public static bool newVersionAvailable = false;
-        public static Stopwatch alertedOfUpdate = new Stopwatch();
+        public static bool alertedOfUpdate = false;
 
-        public static bool tester = false;
+        public static UiTooltipSimple tooltip = null;
+        public static Stopwatch tooltipTimer = new Stopwatch();
+        public static int tooltipLength = 0;
+
+        public static int KyuHairstyle = 1;
+        public static int KyuOutfit = 1;
 
         private void Awake()
         {
             ReturnToMenuEnabled = Config.Bind(
                 "Settings", nameof(ReturnToMenuEnabled),
                 true,
-                "Enable or disable the return to main menu feature");
-            CheatHotkeyEnabled = Config.Bind(
-                "Settings", nameof(CheatHotkeyEnabled),
-                true,
-                "Enable or disable the cheat hotkey (C on main menu)");
+                "Enable or disable the return to main menu hotkey");
+            ResetKey = Config.Bind(
+                "Settings", nameof(ResetKey),
+                new KeyboardShortcut(KeyCode.F4),
+                "The hotkey to use for going back to the title");
             
             CensorshipEnabled = Config.Bind(
                 "Settings", nameof(CensorshipEnabled),
                 true,
-                "Enable or disable the censorship mods (not yet applicable)");
-            
+                "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
 
+            AutoDeleteFile = Config.Bind(
+                "Settings", nameof(AutoDeleteFile),
+                4,
+                "The file that will be erased on new game if all files are full");
+            
             MouseWheelEnabled = Config.Bind(
                 "Settings", nameof(MouseWheelEnabled),
                 true,
@@ -76,11 +87,15 @@ namespace HP2SpeedrunMod
                 true,
                 "Enable or disable all fake clicks");
 
-            ResetKey = Config.Bind(
-                "Settings", nameof(ResetKey),
-                new KeyboardShortcut(KeyCode.F4),
-                "The key to use for going back to the title");
+            CheatHotkeyEnabled = Config.Bind(
+                "Settings", nameof(CheatHotkeyEnabled),
+                true,
+                "Enable or disable the cheat hotkey (C on main menu)");
 
+            AllPairsEnabled = Config.Bind(
+                "Settings", nameof(AllPairsEnabled),
+                false,
+                "Enable or disable all 66 pairs showing up (any save files used with this active will need to be erased if you go back to 24-pair mode)");
         }
 
         void Start()
@@ -207,6 +222,12 @@ namespace HP2SpeedrunMod
             }
         }
 
+        void SetKyuOutfit(int num, bool hairstyle = false)
+        {
+            num = Mathf.Clamp(num, 0, 5);
+            if (hairstyle) KyuHairstyle = num;
+            else KyuOutfit = num;
+        }
         public bool UnloadGame()
         {
             //exceptions to when we are allowed to unload
@@ -234,29 +255,60 @@ namespace HP2SpeedrunMod
             doll.notificationBox.Show(s, 0, silent);
         }
 
+        public static void ShowTooltip(string s, int length, int xpos = 0, int ypos = 45) {
+            tooltipTimer.Reset();
+            tooltip = Game.Manager.Ui.GetTooltip<UiTooltipSimple>(TooltipType.SIMPLE);
+            tooltip.Populate(s);
+            tooltip.Show(new Vector2(xpos, ypos));
+            tooltipLength = length;
+            tooltipTimer.Start();
+        }
+
         private void Update() // Another Unity method
         {
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
-
+            //if (Game.Data.GirlPairs.GetAll().Count < 30) Datamining.ExperimentalAllPairsMod();
             InputPatches.prevHoriz = InputPatches.horiz; InputPatches.prevVert = InputPatches.vert;
+
+            if (tooltip != null)
+            {
+                if (tooltipTimer.ElapsedMilliseconds > tooltipLength)
+                {
+                    tooltipTimer.Reset();
+                    tooltip.Hide();
+                    tooltip = null;
+                }
+            }
+            //if tooltip became null, stop timer
+            else tooltipTimer.Reset();
 
             if (Game.Manager.Ui.currentCanvas.titleCanvas)
             {
                 //display New Version tooltip for 10 seconds
-                if (newVersionAvailable)
+                if (newVersionAvailable && !alertedOfUpdate)
                 {
-                    UiTooltipSimple updateTip = Game.Manager.Ui.GetTooltip<UiTooltipSimple>(TooltipType.SIMPLE);
+                    //disable this for his version
+                    alertedOfUpdate = true;
+                    ShowTooltip("Update Available!\nClick on Credits!", 10000);
+                }
 
-                    if (!updateTip.isShowing && alertedOfUpdate.ElapsedMilliseconds == 0)
+                //check for Kyu outfits
+                if (Input.GetKey(KeyCode.K))
+                {
+                    bool hairstyle = (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl));
+                    for (int i = (int)KeyCode.Alpha0; i <= (int)KeyCode.Alpha5; i++)
                     {
-                        updateTip.Populate("Update Available!\nClick on Credits!");
-                        updateTip.Show(new Vector2(0, 45));
-                        alertedOfUpdate.Start();
-                    }
-                    else if (alertedOfUpdate.IsRunning && alertedOfUpdate.ElapsedMilliseconds > 10000)
-                    {
-                        alertedOfUpdate.Stop();
-                        updateTip.Hide();
+                        //Alpha0 = 48, Keypad0 = 256
+                        int num = i - 48;
+                        if ((Input.GetKeyDown((KeyCode)i) || Input.GetKeyDown((KeyCode)(i + 208))))
+                        {
+                            SetKyuOutfit(num, hairstyle);
+                            string s = "Kyu ";
+                            if (hairstyle) s += "Hairstyle #";
+                            else s += "Outfit #";
+                            s += num + " Chosen!";
+                            ShowTooltip(s, 2000);
+                        }
                     }
                 }
 
@@ -266,9 +318,10 @@ namespace HP2SpeedrunMod
                     Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxReject);
                     PlayCheatLine();
                     Harmony.CreateAndPatchAll(typeof(CheatPatches), null);
-                    if (Game.Manager.testMode == false) AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, true);
+                    //testMode bugs the final boss out, apply the quick transitions code in update instead
+                    //if (Game.Manager.testMode == false) AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, true);
                     CheatPatches.UnlockAllCodes();
-
+                    ShowTooltip("Cheat Mode Activated!", 2000, 0, 30);
                     cheatsEnabled = true;
                 }
             }
@@ -283,7 +336,26 @@ namespace HP2SpeedrunMod
 
             if (cheatsEnabled)
             {
-                if (Input.GetKey(KeyCode.LeftControl))
+                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.GetAll()[12]);
+                if (Input.GetKeyDown(KeyCode.F1))
+                {
+                    if (Game.Session.Location.currentLocation.locationType == LocationType.DATE)
+                    {
+                        ShowNotif("Puzzle Cleared!", 2);
+                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
+                        Game.Session.Puzzle.puzzleStatus.CheckChanges();
+                    }
+                    else
+                    {
+                        ShowNotif("Fruit Given!", 2);
+                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.FLIRTATION, 100);
+                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.ROMANCE, 100);
+                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.SEXUALITY, 100);
+                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.TALENT, 100);
+                    }
+                }
+
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
                 {
                     if (Input.GetKeyDown(KeyCode.A))
                     {
@@ -310,12 +382,14 @@ namespace HP2SpeedrunMod
 
                     for (int i = (int)KeyCode.Alpha0; i <= (int)KeyCode.Alpha9; i++)
                     {
+                        //Alpha0 = 48, Keypad0 = 256
                         int num = i - 48;
-                        if (!Game.Manager.Ui.currentCanvas.titleCanvas && Input.GetKeyDown((KeyCode)i))
+
+                        if (!Game.Manager.Ui.currentCanvas.titleCanvas && (Input.GetKeyDown((KeyCode)i) || Input.GetKeyDown((KeyCode)(i+208))))
                         {
                             foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
                             {
-                                ShowNotif("Changed to Outfit #" + num, 2);
+                                ShowThreeNotif("Changed to Outfit #" + num);
                                 doll.ChangeHairstyle(num);
                                 doll.ChangeOutfit(num);
                             }
@@ -324,9 +398,25 @@ namespace HP2SpeedrunMod
 
                     if (Input.GetKeyDown(KeyCode.N))
                     {
-                        if (!nudePatch) ShowNotif("AWOOOOOOOOOOGA", 2);
                         nudePatch = !nudePatch;
-                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls) doll.ChangeOutfit();
+                        if (nudePatch)
+                        {
+                            ShowNotif("AWOOOOOOOOOOGA", 2);
+                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                            {
+                                doll.partNipples.Show();
+                                doll.partOutfit.Hide();
+                            }
+                        }
+                        else
+                        {
+                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                            {
+                                doll.partNipples.Hide();
+                                doll.partOutfit.Show();
+                            }
+                        }
+                            
                     }
 
                     if (Input.GetKeyDown(KeyCode.M))
@@ -341,16 +431,18 @@ namespace HP2SpeedrunMod
                         Datamining.LocationInfo();
                     }
 
-                    if (Input.GetKeyDown(KeyCode.P))
+                    if (Input.GetKeyDown(KeyCode.G))
                     {
                         Datamining.GetGirlData();
                     }
+
+                    if (Input.GetKeyDown(KeyCode.P))
+                    {
+
+                    }
                 }
 
-                if (Input.GetKeyDown(KeyCode.F1))
-                {
-
-                }
+                
             }
             /*
             Logger.LogDebug(Game.Data.Codes.GetAll();

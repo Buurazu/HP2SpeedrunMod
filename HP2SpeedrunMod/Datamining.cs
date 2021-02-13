@@ -14,6 +14,87 @@ namespace HP2SpeedrunMod
     {
         public static BepInEx.Logging.ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("Datamining");
 
+        public static void ExperimentalAllPairsMod()
+        {
+            Dictionary<int, GirlPairDefinition> allPairs = (Dictionary<int, GirlPairDefinition>)AccessTools.Field(typeof(GirlPairData), "_definitions").GetValue(Game.Data.GirlPairs);
+            foreach (GirlDefinition g in Game.Data.Girls.GetAll())
+            {
+                //g.specialCharacter = false;
+            }
+            List<GirlPairDefinition> stockPairs = Game.Data.GirlPairs.GetAllBySpecial(false);
+            int startingID = 27;
+            int maxGirls = 12;
+            for (int i = 1; i <= maxGirls-1; i++)
+            {
+                for (int j = i+1; j <= maxGirls; j++)
+                {
+                    bool addThis = true;
+                    for (int k = 0; k < stockPairs.Count; k++)
+                    {
+                        if (stockPairs[k].HasGirlDef(Game.Data.Girls.Get(i)) && stockPairs[k].HasGirlDef(Game.Data.Girls.Get(j)))
+                        {
+                            addThis = false;
+                        }
+                    }
+                    if (addThis)
+                    {
+                        GirlPairDefinition gpd = ScriptableObject.CreateInstance<GirlPairDefinition>();
+                        gpd.girlDefinitionOne = Game.Data.Girls.Get(i);
+                        gpd.girlDefinitionTwo = Game.Data.Girls.Get(j);
+                        gpd.id = startingID;
+                        startingID++;
+                        gpd.specialPair = false;
+                        gpd.introductionPair = false;
+                        gpd.introSidesFlipped = false;
+                        gpd.photoDefinition = Game.Data.Photos.Get(1);
+                        gpd.meetingLocationDefinition = Game.Data.Locations.GetAllByLocationType(LocationType.SIM)[0];
+                        gpd.hasMeetingStyleOne = false;
+                        gpd.meetingStyleTypeOne = GirlStyleType.SEXY;
+                        gpd.meetingStyleTypeTwo = GirlStyleType.SEXY;
+                        gpd.hasMeetingStyleTwo = false;
+                        gpd.sexDaytime = ClockDaytimeType.AFTERNOON;
+                        gpd.sexLocationDefinition = Game.Data.Locations.GetAllByLocationType(LocationType.DATE)[0];
+                        gpd.sexStyleTypeOne = GirlStyleType.SEXY;
+                        gpd.sexStyleTypeTwo = GirlStyleType.SEXY;
+                        gpd.relationshipCutsceneDefinitions = Game.Data.GirlPairs.Get(1).relationshipCutsceneDefinitions;
+                        List<GirlPairFavQuestionSubDefinition> Qs = new List<GirlPairFavQuestionSubDefinition>();
+                        //oops all this code was actually useless, no unused pairs have any similarities
+                        /*
+                        for (int answer = 0; answer < gpd.girlDefinitionOne.favAnswers.Count && answer < gpd.girlDefinitionTwo.favAnswers.Count; answer++)
+                        {
+                            if (gpd.girlDefinitionOne.favAnswers[answer] == gpd.girlDefinitionTwo.favAnswers[answer])
+                            {
+                                GirlPairFavQuestionSubDefinition q = new GirlPairFavQuestionSubDefinition();
+                                q.questionDefinition = Game.Data.Questions.Get(answer + 1);
+                                q.girlResponseIndexOne = Qs.Count;
+                                q.girlResponseIndexTwo = Qs.Count;
+                                Qs.Add(q);
+                            }
+                        }*/
+                        //add a "random" favorite question just so the game doesn't crash
+                        if (Qs.Count == 0)
+                        {
+                            GirlPairFavQuestionSubDefinition q = new GirlPairFavQuestionSubDefinition();
+                            q.questionDefinition = Game.Data.Questions.Get(gpd.id % 20 + 1);
+                            q.girlResponseIndexOne = Qs.Count;
+                            q.girlResponseIndexTwo = Qs.Count;
+                            Qs.Add(q);
+                        }
+                        gpd.favQuestions = Qs;
+
+                        allPairs.Add(gpd.id, gpd);
+                    }
+                }
+            }
+            
+            GirlPairDefinition test = Game.Data.GirlPairs.GetAllBySpecial(false)[Game.Data.GirlPairs.GetAllBySpecial(false).Count - 1];
+            /*Logger.LogDebug("pair count: " + Game.Data.GirlPairs.GetAllBySpecial(false).Count);
+            foreach (GirlPairDefinition tester in Game.Data.GirlPairs.GetAllBySpecial(false))
+            {
+                Logger.LogDebug(tester.girlDefinitionOne.girlName + " " + tester.girlDefinitionTwo.girlName + " " + tester.id);
+            }*/
+        }
+
         public static void GetAllDialogTriggers()
         {
             string huge = "";
@@ -77,6 +158,21 @@ namespace HP2SpeedrunMod
             List<GirlDefinition> allBySpecial = Game.Data.Girls.GetAllBySpecial(false);
 
             List<GirlPairDefinition> allBySpecial2 = Game.Data.GirlPairs.GetAllBySpecial(false);
+
+            foreach (GirlDefinition g in allBySpecial)
+            {
+                Logger.LogDebug(g.girlName + " " + g.id);
+            }
+            List<GirlDefinition> allSpecialGirls = Game.Data.Girls.GetAllBySpecial(true);
+            foreach (GirlDefinition g in allSpecialGirls)
+            {
+                Logger.LogDebug(g.girlName + " " + g.id);
+            }
+
+            foreach (PlayerFileGirl pfg in Game.Persistence.playerFile.girls)
+            {
+                Logger.LogDebug(pfg.girlDefinition.girlName);
+            }
 
             string data = "";
             Logger.LogDebug("test");
