@@ -334,6 +334,12 @@ namespace HP2SpeedrunMod
             if (res.Length == 2 && int.TryParse(res[0].Trim(), out width) && int.TryParse(res[1].Trim(), out height))
             {
                 Screen.SetResolution(width, height, false);
+                //messing with resolution stuff
+                //Datamining.Logger.LogDebug(Game.Manager.Ui.currentCanvas.canvasScaler.screenMatchMode);
+                //Game.Manager.Ui.currentCanvas.canvasScaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                //Game.Manager.Ui.currentCanvas.canvasScaler.matchWidthOrHeight = 0.5f;
+                //Game.Manager.Ui.currentCanvas.canvasScaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ConstantPixelSize;
+
                 return false;
             }
             else return true;
