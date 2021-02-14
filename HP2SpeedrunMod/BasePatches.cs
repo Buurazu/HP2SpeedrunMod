@@ -323,5 +323,20 @@ namespace HP2SpeedrunMod
         }
 
         */
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppCode), "OnSubmitButtonPressed")]
+        public static bool CustomResolutions(UiCellphoneAppCode __instance)
+        {
+            string input = __instance.inputField.text.ToUpper().Trim();
+            string[] res = input.Split(new string[] { "X" }, StringSplitOptions.RemoveEmptyEntries);
+            int width = 0; int height = 0;
+            if (res.Length == 2 && int.TryParse(res[0].Trim(), out width) && int.TryParse(res[1].Trim(), out height))
+            {
+                Screen.SetResolution(width, height, false);
+                return false;
+            }
+            else return true;
+        }
     }
 }

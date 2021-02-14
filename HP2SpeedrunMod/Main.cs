@@ -146,7 +146,7 @@ namespace HP2SpeedrunMod
                 case ("1.0.0"):
                 case ("1.0.1"):
                     return ONE;
-                default: return UNKNOWN;
+                default: return ONE;
 
             }
         }
@@ -375,7 +375,7 @@ namespace HP2SpeedrunMod
                         {
                             foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
                             {
-                                if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle();
+                                if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
                             }
                         }
                     }
