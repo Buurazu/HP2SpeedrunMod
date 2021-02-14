@@ -248,14 +248,18 @@ namespace HP2SpeedrunMod
         }
         public static void ShowNotif(string s, int pos = 1, bool silent = false)
         {
-            if (Game.Manager.Ui.currentCanvas.titleCanvas) return;
+            if (Game.Manager.Ui.currentCanvas.titleCanvas)
+            {
+                ShowTooltip(s, 3000);
+                return;
+            }
             UiDoll doll = Game.Session.gameCanvas.dollLeft;
             if (pos == 1) doll = Game.Session.gameCanvas.dollMiddle;
             else if (pos == 2) doll = Game.Session.gameCanvas.dollRight;
             doll.notificationBox.Show(s, 0, silent);
         }
 
-        public static void ShowTooltip(string s, int length, int xpos = 0, int ypos = 45) {
+        public static void ShowTooltip(string s, int length, int xpos = 0, int ypos = 30) {
             tooltipTimer.Reset();
             tooltip = Game.Manager.Ui.GetTooltip<UiTooltipSimple>(TooltipType.SIMPLE);
             tooltip.Populate(s);
@@ -289,7 +293,25 @@ namespace HP2SpeedrunMod
                 {
                     //disable this for his version
                     alertedOfUpdate = true;
-                    ShowTooltip("Update Available!\nClick on Credits!", 10000);
+                    ShowTooltip("Update Available!\nClick on Credits!", 10000, 0, 45);
+                }
+
+                if (Input.GetKeyDown(KeyCode.A))
+                {
+                    List<CodeDefinition> codes = Game.Data.Codes.GetAll();
+                    CodeDefinition codeDefinition = codes[13];
+                    if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
+                        ShowTooltip("Abia's Hair Enabled!", 2000);
+                    }
+                    else
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Remove(codeDefinition);
+                        ShowTooltip("Abia's Hair Disabled!", 2000);
+                    }
+                    Game.Manager.Ui.currentCanvas.GetComponent<UiTitleCanvas>().coverArt.Refresh();
+                    
                 }
 
                 //check for Kyu outfits
@@ -355,9 +377,19 @@ namespace HP2SpeedrunMod
                     }
                 }
 
+                if (Input.GetKeyDown(KeyCode.F2))
+                {
+                    if (!Game.Manager.Ui.currentCanvas.titleCanvas) {
+                        ShowNotif("Stamina gained!", 2);
+                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, false);
+                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, true);
+                        Game.Session.Puzzle.puzzleStatus.CheckChanges();
+                    }
+                }
+
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
                 {
-                    if (Input.GetKeyDown(KeyCode.A))
+                    if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)
                     {
                         List<CodeDefinition> codes = Game.Data.Codes.GetAll();
                         CodeDefinition abiaHair = codes[13];
@@ -371,12 +403,9 @@ namespace HP2SpeedrunMod
                             Game.Persistence.playerData.unlockedCodes.Remove(abiaHair);
                             ShowNotif("Abia's hair disabled!", 0);
                         }
-                        if (!Game.Manager.Ui.currentCanvas.titleCanvas)
+                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
                         {
-                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                            {
-                                if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
-                            }
+                            if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
                         }
                     }
 
