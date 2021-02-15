@@ -5,14 +5,15 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using BepInEx.Logging;
+using DG.Tweening;
 using HarmonyLib;
 using HarmonyLib.Tools;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 namespace HP2SpeedrunMod
 {
-    // Token: 0x02000002 RID: 2
     public class BasePatches
     {
         public static int searchForMe;
@@ -23,150 +24,12 @@ namespace HP2SpeedrunMod
             searchForMe = 123456789;
         }
 
-        //define inappropriate outfits for each character
-        //Girl IDs start at 1, be careful
-        public static int[][] lewdOutfits =
-        {
-            //Lola
-            new int[] { 4, 5 },
-            //Jessie
-            new int[] { 4, 5, 8, 9 },
-            //honestly Lillian's lingerie is tame, but fuck it
-            new int[] { 4, 5 },
-            //Zoey
-            new int[] { 2, 3, 4, 5, 7 },
-            //Sarah
-            new int[] { 0, 4, 5, 8, 9 },
-            //Lailani is pretty pure
-            new int[] { 4 },
-            //Candace rockin the pasties on 3, jeez
-            new int[] { 0, 3, 4, 5 },
-            //Nora
-            new int[] { 4, 7, 8 },
-            //Brooke
-            new int[] { 0, 4, 5, 6 },
-            //Ashley
-            new int[] { 4, 5, 7 },
-            //Abia
-            new int[] { 4, 5, 6, 9 },
-            //Polly
-            new int[] { 5, 9 },
-            //Kyu (6,7,8,9 are all treated as 5)
-            new int[] { 5, 6, 7, 8, 9 },
-            //Moxie
-            new int[] { 5 },
-            //Jewn
-            new int[] { 5 }
-        };
-
-        //custom Kyu hairstyle
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(UiDoll), "ChangeHairstyle")]
-        public static void ForGarrett(UiDoll __instance, ref int hairstyleIndex, ref int ____currentHairstyleIndex, ref GirlDefinition ____girlDefinition, ref int __state)
-        {
-            if (____girlDefinition == null) return;
-            if (____girlDefinition.girlName == "Kyu")
-            {
-                hairstyleIndex = HP2SR.KyuHairstyle;
-            }
-        }
-
-        //censor outfits, plus custom Kyu outfit
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(UiDoll), "ChangeOutfit")]
-        public static void CensorLewdOutfits(UiDoll __instance, ref int outfitIndex, ref int ____currentOutfitIndex, ref GirlDefinition ____girlDefinition, ref int __state)
-        {
-            if (____girlDefinition == null) return;
-
-            //set state to the intended outfit index, and change outfitIndex if lewd
-            __state = outfitIndex;
-            if (outfitIndex == -1) __state = Game.Persistence.playerFile.GetPlayerFileGirl(____girlDefinition).outfitIndex;
-            if (____girlDefinition.girlName == "Kyu")
-            {
-                __state = HP2SR.KyuOutfit;
-                outfitIndex = HP2SR.KyuOutfit;
-            }
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
-            {
-                foreach (int i in lewdOutfits[____girlDefinition.id-1])
-                {
-                    if (i == __state)
-                    {
-                        outfitIndex = ____girlDefinition.defaultOutfitIndex;
-                        break;
-                    }
-                }
-            }
-            //the ChangeOutfit function should now change the outfit to the girl's default outfit, and then the postfix allows lewd outfits to still be unlocked
-        }
-
-        //censorship postfix, plus nude mod
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(UiDoll), "ChangeOutfit")]
-        public static void Nippy(UiDoll __instance, ref int outfitIndex, ref int ____currentOutfitIndex, ref GirlDefinition ____girlDefinition, ref int __state)
-        {
-            if (____girlDefinition == null) return;
-            //Datamining.Logger.LogDebug("outfit change to " + outfitIndex + "; changed to " + __instance.currentOutfitIndex);
-            //FileLog.Log("outfit changed to " + outfitIndex);
-            if (HP2SR.nudePatch)
-            {
-                __instance.partNipples.Show();
-                __instance.partOutfit.Hide();
-            }
-            else
-            {
-                __instance.partOutfit.Show();
-            }
-            //set outfit index to whatever it was supposed to be, for outfit unlocking purposes
-            if (__state != -1)
-            {
-                __state = Mathf.Clamp(__state, 0, ____girlDefinition.outfits.Count - 1);
-                ____currentOutfitIndex = __state;
-            }
-        }
-
-        //censorship of large photos, replace with locations
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PhotoDefinition), "GetBigPhotoImage")]
-        public static bool NoCGsPlease(PhotoDefinition __instance, ref Sprite __result)
-        {
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
-            {
-                __result = Game.Session.Location.currentLocation.backgrounds[0];
-                return false;
-            }
-            else return true;
-        }
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PhotoDefinition), "GetThumbnailImage")]
-        public static bool NoThumbnailsEither(PhotoDefinition __instance, ref Sprite __result)
-        {
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
-            {
-                //__result = Game.Session.Location.currentLocation.finderLocationIcon;
-                __result = Game.Session.Location.currentLocation.backgrounds[0];
-                return false;
-            }
-            else return true;
-        }
-
-        //rip Kyu's butt :(
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(UiWindowKyuButt), "Show")]
-        public static void KissMyBigFatVoidBIIIIIITCH(UiWindowKyuButt __instance)
-        {
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
-            {
-                __instance.buttImage.color = new Color(0, 0, 0, 1);
-            }
-        }
-
         //make pairs above the normal amount default to LOVERS
         [HarmonyPostfix]
         [HarmonyPatch(typeof(SaveFileGirlPair), "Reset")]
         public static void EveryoneBeLovin(SaveFileGirlPair __instance, ref int id)
         {
-            if (id >= 27) __instance.relationshipLevel = (int)GirlPairRelationshipType.LOVERS;
+            if (HP2SR.AllPairsEnabled.Value && id >= 27) __instance.relationshipLevel = (int)GirlPairRelationshipType.LOVERS;
         }
 
         //FOR PAIRS CHEAT ONLY
@@ -174,7 +37,7 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(PlayerFile), "ReadData")]
         public static void AddExtraPairs(PlayerFile __instance, ref SaveFile saveFile)
         {
-            if (HP2SR.AllPairsEnabled.Value && Game.Data.GirlPairs.GetAll().Count < 30) Datamining.ExperimentalAllPairsMod();
+            if (HP2SR.AllPairsEnabled.Value && Game.Data.GirlPairs.GetAll().Count < 40) Datamining.ExperimentalAllPairsMod();
         }
 
         //allow the disabled toggles (quick transitions, Abia's hair) to be added to the code list
@@ -183,7 +46,9 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(SettingManager), "Start")]
         public static bool CodeEnabler(ref Dictionary<string, CodeDefinition> ____unlockCodes)
         {
+            //partial fix for 4:3 resolutions
             Game.Manager.Ui.currentCanvas.canvasScaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand;
+            //enable the disabled codes muahaha
             List<CodeDefinition> all = Game.Data.Codes.GetAll();
             for (int i = 0; i < all.Count; i++)
             {
@@ -191,6 +56,10 @@ namespace HP2SpeedrunMod
                 {
                     ____unlockCodes.Add(all[i].codeHash, all[i]);
                 }
+            }
+            //remove the quick transitions code on boot
+            while (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) {
+                Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
             }
             return false;
         }
@@ -244,6 +113,19 @@ namespace HP2SpeedrunMod
             Game.Persistence.SaveGame();
 
             HP2SR.hasReturned = false;
+            //alert the autosplitter
+            if (!HP2SR.hasReturned && !HP2SR.AllPairsEnabled.Value)
+                searchForMe = 111;
+            //just to make sure the quick transitions code is disabled
+            if (!HP2SR.cheatsEnabled)
+                Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppSettings), "OnReturnButtonPressed")]
+        public static void LegitReturn()
+        {
+            searchForMe = -112;
         }
 
         //Runs aren't legitimate with cheat mode or after returning to menu with the hotkey
@@ -254,6 +136,7 @@ namespace HP2SpeedrunMod
             if (HP2SR.cheatsEnabled) HP2SR.ShowThreeNotif("CHEATS ARE ENABLED");
             else if (HP2SR.hasReturned) HP2SR.ShowThreeNotif("This is for practice purposes only");
             //only display the warning on the Your Apartment location
+            else if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) HP2SR.ShowThreeNotif("Quick Transitions are on, somehow");
             else if (HP2SR.AllPairsEnabled.Value && __instance.currentLocation == Game.Data.Locations.Get(22)) HP2SR.ShowThreeNotif("ALL PAIRS MODE IS ON");
         }
 
@@ -325,6 +208,37 @@ namespace HP2SpeedrunMod
         }
 
         */
+
+        //quicker return to menu hotkey
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiGameCanvas), "UnloadStep")]
+        public static bool InstantReturn(UiGameCanvas __instance, ref Tweener ____titleTweener)
+        {
+            if (!HP2SR.unloadingByHotkey) return true;
+
+            HP2SR.unloadingByHotkey = false;
+            __instance.header.isLocked = true;
+            __instance.cellphone.isLocked = true;
+            __instance.overlayCanvasGroup.blocksRaycasts = true;
+            Game.Manager.Audio.FadeOutCategory(AudioCategory.SOUND, 0f);
+            Game.Manager.Audio.FadeOutCategory(AudioCategory.VOICE, 0f);
+            Game.Manager.Audio.FadeOutCategory(AudioCategory.MUSIC, 0f);
+            Game.Manager.Time.KillTween(____titleTweener, false, true);
+            
+            Game.Manager.ClearSession();
+            SceneManager.LoadScene("TitleScene", LoadSceneMode.Single);
+
+            return false;
+        }
+
+        //prevent being considered unfocused
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
+        public static bool StopBeingUnfocused()
+        {
+            if (Application.runInBackground) return false;
+            else return true;
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiCellphoneAppCode), "OnSubmitButtonPressed")]

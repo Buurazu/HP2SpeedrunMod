@@ -32,6 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BasePatches.cs" />
+    <Compile Include="CensorshipPatches.cs" />
     <Compile Include="CheatPatches.cs" />
     <Compile Include="Datamining.cs" />
     <Compile Include="InputPatches.cs" />

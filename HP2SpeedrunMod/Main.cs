@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
 using System.Diagnostics;
+using DG.Tweening.Core;
 
 namespace HP2SpeedrunMod
 {
@@ -21,7 +22,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.1.0";
+        public const string PluginVersion = "1.3.0";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -36,16 +37,18 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
+        public static bool unloadingByHotkey = false;
         public static bool hasReturned = false;
         public static bool cheatsEnabled = false;
         public static bool savingDisabled = false;
         public static bool nudePatch = false;
 
-        public const int AXISES = 13;
-
         public const int UNKNOWN = 0;
         public const int ONE = 1;
         public const int TWO = 2;
+
+        public const int QUICKTRANSITIONS = 13;
+        public const int ABIAHAIR = 14;
 
         public static bool newVersionAvailable = false;
         public static bool alertedOfUpdate = false;
@@ -104,6 +107,7 @@ namespace HP2SpeedrunMod
             Application.runInBackground = true;
 
             Harmony.CreateAndPatchAll(typeof(BasePatches), null);
+            Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
             //initiate the variable used for autosplitting
             BasePatches.InitSearchForMe();
 
@@ -125,11 +129,6 @@ namespace HP2SpeedrunMod
             {
                 ItemNameList.Add(item.name, item.id);
             }
-
-            if (CensorshipEnabled.Value)
-            {
-                Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
-            }
             */
             if (InputModsEnabled.Value)
             {
@@ -145,6 +144,7 @@ namespace HP2SpeedrunMod
             {
                 case ("1.0.0"):
                 case ("1.0.1"):
+                case ("1.0.2"):
                     return ONE;
                 default: return ONE;
 
@@ -236,6 +236,7 @@ namespace HP2SpeedrunMod
             if (Game.Session.Location.isTraveling) { Logger.LogDebug("isTraveling = no unloading"); return false; }
             if ((bool)AccessTools.Field(typeof(UiGameCanvas), "_unloadingGame").GetValue(Game.Session.gameCanvas)) { Logger.LogDebug("_unloadingGame = no unloading"); return false; }
 
+            unloadingByHotkey = true;
             Game.Session.gameCanvas.UnloadGame();
             return true;
         }
@@ -271,7 +272,6 @@ namespace HP2SpeedrunMod
         private void Update() // Another Unity method
         {
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
-            //if (Game.Data.GirlPairs.GetAll().Count < 30) Datamining.ExperimentalAllPairsMod();
             InputPatches.prevHoriz = InputPatches.horiz; InputPatches.prevVert = InputPatches.vert;
 
             if (tooltip != null)
@@ -286,20 +286,38 @@ namespace HP2SpeedrunMod
             //if tooltip became null, stop timer
             else tooltipTimer.Reset();
 
+            //add the quick transitions code if cheat mode is on
+            if (cheatsEnabled && !Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(QUICKTRANSITIONS)))
+                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(QUICKTRANSITIONS));
+
+            //send data to autosplitter
+            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session.Puzzle.isPuzzleActive)
+            {
+                UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
+                bool isBonusRound = (bool)AccessTools.Field(typeof(PuzzleStatus), "_bonusRound").GetValue(Game.Session.Puzzle.puzzleStatus);
+                Logger.LogDebug(isBonusRound);
+                if (status.affectionMeter.currentValue == status.affectionMeter.maxValue)
+                {
+                    if (isBonusRound) BasePatches.searchForMe = 200;
+                    else BasePatches.searchForMe = 100;
+                }
+                    
+                else
+                    BasePatches.searchForMe = 0;
+            }
+
             if (Game.Manager.Ui.currentCanvas.titleCanvas)
             {
                 //display New Version tooltip for 10 seconds
                 if (newVersionAvailable && !alertedOfUpdate)
                 {
-                    //disable this for his version
                     alertedOfUpdate = true;
                     ShowTooltip("Update Available!\nClick on Credits!", 10000, 0, 45);
                 }
 
                 if (Input.GetKeyDown(KeyCode.A))
                 {
-                    List<CodeDefinition> codes = Game.Data.Codes.GetAll();
-                    CodeDefinition codeDefinition = codes[13];
+                    CodeDefinition codeDefinition = Game.Data.Codes.Get(ABIAHAIR);
                     if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
                     {
                         Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
@@ -340,8 +358,7 @@ namespace HP2SpeedrunMod
                     Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxReject);
                     PlayCheatLine();
                     Harmony.CreateAndPatchAll(typeof(CheatPatches), null);
-                    //testMode bugs the final boss out, apply the quick transitions code in update instead
-                    //if (Game.Manager.testMode == false) AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, true);
+                    Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(QUICKTRANSITIONS));
                     CheatPatches.UnlockAllCodes();
                     ShowTooltip("Cheat Mode Activated!", 2000, 0, 30);
                     cheatsEnabled = true;
@@ -352,18 +369,21 @@ namespace HP2SpeedrunMod
             {
                 if (ResetKey.Value.IsDown())
                 {
-                    if (UnloadGame()) hasReturned = true;
+                    if (UnloadGame())
+                    {
+                        hasReturned = true;
+                        BasePatches.searchForMe = -111;
+                    }
                 }
             }
 
             if (cheatsEnabled)
             {
-                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.GetAll()[12]);
                 if (Input.GetKeyDown(KeyCode.F1))
                 {
                     if (Game.Session.Location.currentLocation.locationType == LocationType.DATE)
                     {
-                        ShowNotif("Puzzle Cleared!", 2);
+                        ShowNotif("Affection Filled!", 2);
                         Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
                         Game.Session.Puzzle.puzzleStatus.CheckChanges();
                     }
@@ -391,8 +411,7 @@ namespace HP2SpeedrunMod
                 {
                     if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)
                     {
-                        List<CodeDefinition> codes = Game.Data.Codes.GetAll();
-                        CodeDefinition abiaHair = codes[13];
+                        CodeDefinition abiaHair = Game.Data.Codes.Get(ABIAHAIR);
                         if (!Game.Persistence.playerData.unlockedCodes.Contains(abiaHair))
                         {
                             Game.Persistence.playerData.unlockedCodes.Add(abiaHair);
@@ -465,59 +484,19 @@ namespace HP2SpeedrunMod
                         Datamining.GetGirlData();
                     }
 
-                    if (Input.GetKeyDown(KeyCode.P))
+                    if (Input.GetKeyDown(KeyCode.D))
                     {
-
+                        Datamining.GetAllDialogTriggers();
+                        Datamining.GetAllCutsceneLines();
                     }
                 }
 
                 
             }
             /*
-            Logger.LogDebug(Game.Data.Codes.GetAll();
-            //Test if we should send the "Venus unlocked" signal
-            //All Panties routes would have met Momo or Celeste by now
-            if (GameManager.System.GameState == GameState.SIM
-                && GameManager.System.Player.GetGirlData(GameManager.Stage.uiGirl.alienGirlDef).metStatus != GirlMetStatus.MET
-                && GameManager.System.Player.GetGirlData(GameManager.Stage.uiGirl.catGirlDef).metStatus != GirlMetStatus.MET
-                && !BaseHunieModPlugin.cheatsEnabled && GameManager.Stage.girl.definition.firstName == "Venus"
-                && GameManager.System.Player.GetGirlData(GameManager.Stage.girl.definition).metStatus != GirlMetStatus.MET
-                && GameManager.Stage.girl.girlPieceContainers.localX < 520)
-            {
-                BasePatches.searchForMe = 500;
-            }
-
-            if (GameManager.System.GameState == GameState.TITLE)
-            {
-
-                if (CheatHotkeyEnabled.Value && cheatsEnabled == false && Input.GetKeyDown(KeyCode.C))
-                {
-                    GameManager.System.Audio.Play(AudioCategory.SOUND, GameManager.Stage.uiPuzzle.puzzleGrid.failureSound, false, 2f, false);
-                    GameManager.System.Audio.Play(AudioCategory.SOUND, GameManager.Stage.uiPuzzle.puzzleGrid.badMoveSound, false, 2f, false);
-                    PlayCheatLine();
-                    Harmony.CreateAndPatchAll(typeof(CheatPatches), null);
-                    cheatsEnabled = true;
-                }
-            }
+            i should still make a save toggle, on F3?
             if (cheatsEnabled)
             {
-                if (Input.GetKeyDown(KeyCode.F1))
-                {
-                    if (GameManager.System.GameState == GameState.PUZZLE)
-                    {
-                        if (GameManager.System.Puzzle.Game.puzzleGameState == PuzzleGameState.WAITING)
-                        {
-                            GameManager.System.Puzzle.Game.SetResourceValue(PuzzleGameResourceType.AFFECTION, 999999, false);
-                            GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Puzzle cleared!");
-                        }
-                    }
-                    else if (GameManager.System.GameState == GameState.SIM)
-                    {
-                        CheatPatches.AddGreatGiftsToInventory();
-                        GameManager.System.Player.money = 69420;
-                        GameManager.System.Player.hunie = 69420;
-                    }
-                }
 
                 if (Input.GetKeyDown(KeyCode.F2))
                 {
@@ -533,33 +512,6 @@ namespace HP2SpeedrunMod
                     }
                 }
 
-                if (Input.GetKeyDown(KeyCode.M))
-                {
-                    InputPatches.mashCheat = !InputPatches.mashCheat;
-                    if (InputPatches.mashCheat)
-                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "MASH POWER ACTIVATED!!!!!");
-                    else
-                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Mash power disabled");
-
-                }
-            }
-            if (ReturnToMenuEnabled.Value)
-            {
-                if (ResetKey.Value.IsDown() || ResetKey2.Value.IsDown())
-                {
-                    if (GameManager.System.GameState == GameState.TITLE)
-                    {
-                        //GameUtil.QuitGame();
-                    }
-                    else
-                    {
-                        if (GameUtil.EndGameSession(false, false, false))
-                        {
-                            hasReturned = true;
-                            BasePatches.searchForMe = -111;
-                        }
-                    }
-                }
             }
             */
         }

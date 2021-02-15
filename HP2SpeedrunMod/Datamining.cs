@@ -106,9 +106,25 @@ namespace HP2SpeedrunMod
                     for (int c = 0; c < lines[a].dialogLineSets[b].dialogLines.Count; c++)
                     {
                         huge += a + "," + b + "," + c + ": " + PurifyDialogText(lines[a].dialogLineSets[b].dialogLines[c].dialogText) + "\n";
+                        if (lines[a].dialogLineSets[b].dialogLines[c].yuri)
+                            huge += a + "," + b + "," + c + " ALT: " + PurifyDialogText(lines[a].dialogLineSets[b].dialogLines[c].yuriDialogText) + "\n";
+                    }
+                    //is it always null?
+                    if (lines[a].responseTriggerDefinition != null)
+                    {
+                            for (int c = 0; c < lines[a].responseTriggerDefinition.dialogLineSets[b].dialogLines.Count; c++)
+                            {
+                                huge += "  " + a + "," + b + "," + c + ": " + PurifyDialogText(lines[a].responseTriggerDefinition.dialogLineSets[b].dialogLines[c].dialogText) + "\n";
+                                if (lines[a].responseTriggerDefinition.dialogLineSets[b].dialogLines[c].yuri)
+                                    huge += a + "," + b + "," + c + " ALT: " + PurifyDialogText(lines[a].responseTriggerDefinition.dialogLineSets[b].dialogLines[c].yuriDialogText) + "\n";
+                        }
                     }
                 }
+                
+                
             }
+
+
             Logger.LogDebug(huge);
         }
 
@@ -198,6 +214,26 @@ namespace HP2SpeedrunMod
             }
             Logger.LogDebug(data);
 
+            string huge = "";
+            for (int a = 0; a < allBySpecial.Count; a++)
+            {
+                for (int b = 0; b < allBySpecial[a].herQuestions.Count; b++)
+                {
+                    for (int c = 0; c < allBySpecial[a].herQuestions[b].answers.Count; c++)
+                    {
+                        huge += a + "," + b + "," + c + ": " + PurifyDialogText(allBySpecial[a].herQuestions[b].answers[c].answerText) + " (" + allBySpecial[a].herQuestions[b].answers[c].responseIndex + ")\n";
+                        if (allBySpecial[a].herQuestions[b].answers[c].hasAlt)
+                            huge += a + "," + b + "," + c + " ALT: " + PurifyDialogText(allBySpecial[a].herQuestions[b].answers[c].answerTextAlt) + " (" + allBySpecial[a].herQuestions[b].answers[c].responseIndex + ")\n";
+
+                    }
+                }
+
+
+            }
+
+
+            Logger.LogDebug(huge);
+
             float num = (float)Mathf.Clamp(Game.Persistence.playerFile.storyProgress - 2, 0, 12) * 0.5f;
             Logger.LogDebug(num);
             for (int i = 0; i < 4; i++)
@@ -280,14 +316,22 @@ namespace HP2SpeedrunMod
                     {
                         huge += a + "," + b + "," + c + ": " + PurifyDialogText(lines[a].steps[b].dialogOptions[c].dialogOptionText) +
                             " (" + lines[a].steps[b].dialogOptions[c].steps.Count + ")\n";
+                        if (lines[a].steps[b].dialogOptions[c].yuri)
+                            huge += a + "," + b + "," + c + " ALT: " + PurifyDialogText(lines[a].steps[b].dialogOptions[c].yuriDialogOptionText) +
+                            " (" + lines[a].steps[b].dialogOptions[c].steps.Count + ")\n";
                         for (int d = 0; d < lines[a].steps[b].dialogOptions[c].steps.Count; d++)
                         {
                             huge += a + "," + b + "," + c + "," + d + ": " + PurifyDialogText(lines[a].steps[b].dialogOptions[c].steps[d].dialogLine.dialogText) +
+                               " (" + lines[a].steps[b].dialogOptions[c].steps[d].dialogOptions.Count + ")\n";
+                            if (lines[a].steps[b].dialogOptions[c].steps[d].dialogLine.yuri)
+                                huge += a + "," + b + "," + c + "," + d + ": " + PurifyDialogText(lines[a].steps[b].dialogOptions[c].steps[d].dialogLine.yuriDialogText) +
                                " (" + lines[a].steps[b].dialogOptions[c].steps[d].dialogOptions.Count + ")\n";
                         }
                     }
                     //Game.Manager.Audio.Play(AudioCategory.VOICE, lines[a].steps[b].audioKlip);
                     huge += a + "," + b + ": " + PurifyDialogText(lines[a].steps[b].dialogLine.dialogText) + "\n";
+                    if (lines[a].steps[b].dialogLine.yuri)
+                        huge += a + "," + b + " ALT: " + PurifyDialogText(lines[a].steps[b].dialogLine.yuriDialogText) + "\n";
                 }
             }
             Logger.LogDebug(huge);
