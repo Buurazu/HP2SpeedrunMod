@@ -380,7 +380,7 @@ namespace HP2SpeedrunMod
                 if (Input.GetKeyDown(KeyCode.F2))
                 {
                     if (!Game.Manager.Ui.currentCanvas.titleCanvas) {
-                        ShowNotif("Stamina gained!", 2);
+                        ShowNotif("Stamina Gained!", 2);
                         Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, false);
                         Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, true);
                         Game.Session.Puzzle.puzzleStatus.CheckChanges();

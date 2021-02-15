@@ -178,10 +178,12 @@ namespace HP2SpeedrunMod
         }
 
         //allow the disabled toggles (quick transitions, Abia's hair) to be added to the code list
+        //also, a partial fix for 4:3 resolutions
         [HarmonyPrefix]
         [HarmonyPatch(typeof(SettingManager), "Start")]
         public static bool CodeEnabler(ref Dictionary<string, CodeDefinition> ____unlockCodes)
         {
+            Game.Manager.Ui.currentCanvas.canvasScaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand;
             List<CodeDefinition> all = Game.Data.Codes.GetAll();
             for (int i = 0; i < all.Count; i++)
             {
