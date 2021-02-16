@@ -22,7 +22,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.3.0";
+        public const string PluginVersion = "1.3.1";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -33,6 +33,7 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<Boolean> CheatHotkeyEnabled { get; private set; }
         public static ConfigEntry<Boolean> AllPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> MouseWheelEnabled { get; private set; }
+        public static ConfigEntry<Boolean> KeyboardEnabled { get; private set; }
         public static ConfigEntry<Boolean> InputModsEnabled { get; private set; }
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
 
@@ -85,6 +86,10 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(MouseWheelEnabled),
                 true,
                 "Enable or disable the mouse wheel being treated as a click");
+            KeyboardEnabled = Config.Bind(
+                "Settings", nameof(KeyboardEnabled),
+                true,
+                "Enable or disable keyboard keys being treated as a click");
             InputModsEnabled = Config.Bind(
                 "Settings", nameof(InputModsEnabled),
                 true,
@@ -142,9 +147,11 @@ namespace HP2SpeedrunMod
         {
             switch (Game.Manager.buildVersion)
             {
+                //eventually, a version update will break something
                 case ("1.0.0"):
                 case ("1.0.1"):
                 case ("1.0.2"):
+                case ("1.0.3"):
                     return ONE;
                 default: return ONE;
 
@@ -291,11 +298,10 @@ namespace HP2SpeedrunMod
                 Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(QUICKTRANSITIONS));
 
             //send data to autosplitter
-            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session.Puzzle.isPuzzleActive)
+            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
             {
                 UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
                 bool isBonusRound = (bool)AccessTools.Field(typeof(PuzzleStatus), "_bonusRound").GetValue(Game.Session.Puzzle.puzzleStatus);
-                Logger.LogDebug(isBonusRound);
                 if (status.affectionMeter.currentValue == status.affectionMeter.maxValue)
                 {
                     if (isBonusRound) BasePatches.searchForMe = 200;
@@ -476,7 +482,18 @@ namespace HP2SpeedrunMod
                     
                     if (Input.GetKeyDown(KeyCode.L))
                     {
-                        Datamining.LocationInfo();
+                        //Datamining.LocationInfo();
+                        CodeDefinition codeDefinition = Game.Data.Codes.Get(16);
+                        if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
+                        {
+                            Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
+                            ShowTooltip("Letterbox Enabled!", 2000);
+                        }
+                        else
+                        {
+                            Game.Persistence.playerData.unlockedCodes.Remove(codeDefinition);
+                            ShowTooltip("Letterbox Disabled!", 2000);
+                        }
                     }
 
                     if (Input.GetKeyDown(KeyCode.G))

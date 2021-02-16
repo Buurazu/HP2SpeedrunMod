@@ -31,6 +31,24 @@ namespace HP2SpeedrunMod
             }
         }
 
+        //credit to RShields
+        //show relationship points on the girl list
+
+        public static string[] shoes = new string[] { "Winter Boots", "Peep Toes", "Booties", "Cyber Boots", "Platforms", "Flip Flops", "Stripper Heels", "Sneakers", "Wedges", "Gladiators", "Flats", "Pumps" };
+        public static string[] uniques = new string[] { "Tailoring", "Alcohol", "Occult", "Spiritual", "Weeaboo", "Spa", "Toddler Toys", "Baby Boy", "Handbags", "Band", "Kinky", "Antiques" };
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiGirlSlot), "Populate")]
+        private static void AddNumber(UiGirlSlot __instance)
+        {
+            GirlDefinition girlDefinition = __instance.girlDefinition;
+            PlayerFileGirl girlFile = Game.Persistence.playerFile.GetPlayerFileGirl(girlDefinition);
+            __instance.nameLabel.richText = true;
+            //__instance.nameLabel.text = "<size=75%><color=#FFFFFF>" + uniques[(int)girlFile.girlDefinition.shoesType] + "<line-height=75%>\n</line-height>" + shoes[(int)girlFile.girlDefinition.shoesType] + "</color></size>\n\n<voffset=3.25em>    " + girlDefinition.GetNickName().ToUpper() + "</voffset>";
+            __instance.nameLabel.text = "<size=230%>" + girlFile.relationshipPoints + "</size>\n<voffset=3em>" + girlDefinition.GetNickName().ToUpper() + "</voffset>";
+            //__instance.nameLabel.text = "    " + girlDefinition.GetNickName().ToUpper();
+        }
+
         //item cheats and tutorial skip and more coming soon
         /*
         public static void AddItem(string theItem, InventoryItemPlayerData[] target = null)
