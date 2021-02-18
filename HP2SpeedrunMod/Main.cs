@@ -146,7 +146,7 @@ namespace HP2SpeedrunMod
                 if (reply != PluginVersion)
                     newVersionAvailable = true;
             }
-            catch (Exception e) { Logger.LogDebug("Couldn't read the pastebin! " + e.ToString()); }
+            catch (Exception e) { Logger.LogMessage("Couldn't read the update pastebin! " + e.ToString()); }
 
             if (InputModsEnabled.Value)
             {

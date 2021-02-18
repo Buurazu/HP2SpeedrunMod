@@ -104,7 +104,7 @@ namespace HP2SpeedrunMod
                 category = categories[cat] + " " + difficulties[difficulty];
                 goal = goals[cat];
 
-                Datamining.Logger.LogDebug("new run: save file #" + runFile + " ," + category + " ," + goal);
+                Datamining.Logger.LogMessage("new run: save file #" + runFile + " ," + category + " ," + goal);
                 //search for comparison splits
                 string target = "splits/data/" + category + ".txt";
                 if (File.Exists(target))
@@ -128,14 +128,14 @@ namespace HP2SpeedrunMod
             }
             else
             {
-                Datamining.Logger.LogDebug("invalid category");
+                Datamining.Logger.LogMessage("invalid category");
             }
         }
 
         public bool split()
         {
             splits.Add(runTimer.Elapsed);
-            Datamining.Logger.LogDebug(runTimer.Elapsed.ToString());
+            Datamining.Logger.LogMessage(runTimer.Elapsed.ToString());
             splitColor = SplitColors.WHITE;
             goldColor = SplitColors.WHITE;
             goldText = "";
@@ -208,7 +208,7 @@ namespace HP2SpeedrunMod
             }
 
             splitText = val;
-            Datamining.Logger.LogDebug(splitText + " " + goldText);
+            Datamining.Logger.LogMessage(splitText + " " + goldText);
             return true;
         }
 
@@ -259,7 +259,7 @@ namespace HP2SpeedrunMod
                     }
                     File.WriteAllLines(target, spansToStrings(golds));
                 }
-                Datamining.Logger.LogDebug("writing PB Attempt.txt");
+                Datamining.Logger.LogMessage("writing PB Attempt.txt");
                 File.WriteAllText("splits/" + category + " Last Attempt.txt", finalRunDisplay);
             }
             category = "";
@@ -295,7 +295,7 @@ namespace HP2SpeedrunMod
         public void push(string s)
         {
             finalRunDisplay += s;
-            Datamining.Logger.LogDebug(finalRunDisplay);
+            Datamining.Logger.LogMessage(finalRunDisplay);
         }
 
         private string[] spansToStrings(List<TimeSpan> list)
