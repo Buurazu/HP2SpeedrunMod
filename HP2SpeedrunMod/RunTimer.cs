@@ -29,6 +29,8 @@ namespace HP2SpeedrunMod
         //public static string[] darkColors = new string[] { "#ffffff", "#4bb7e8", "#e24c3c", "#ddaf4c" };
         public static string[] colors = new string[] { "#ffffff", "#d6e9ff", "#ffcccc", "#ddaf4c" };
 
+        public static string lastSavedSplitsPath = "";
+
         public Stopwatch runTimer;
         public int runFile;
         public string category;
@@ -261,6 +263,7 @@ namespace HP2SpeedrunMod
                 }
                 Datamining.Logger.LogMessage("writing PB Attempt.txt");
                 File.WriteAllText("splits/" + category + " Last Attempt.txt", finalRunDisplay);
+                lastSavedSplitsPath = "splits/" + category + " Last Attempt.txt";
             }
             category = "";
             goal = -1;

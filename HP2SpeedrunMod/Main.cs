@@ -308,8 +308,14 @@ namespace HP2SpeedrunMod
             //if tooltip became null, stop timer
             else tooltipTimer.Reset();
 
-            //if currently in a puzzle, and the status bar is up, send data to autosplitters
-            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
+            //display the splits folder on Ctrl+S
+            if (Input.GetKeyDown(KeyCode.S) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+                System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
+            }
+
+                //if currently in a puzzle, and the status bar is up, send data to autosplitters
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
             {
                 UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
                 bool isBonusRound = Game.Session.Puzzle.puzzleStatus.bonusRound;
@@ -360,7 +366,7 @@ namespace HP2SpeedrunMod
                                 {
                                     dateNum = 5 - (Game.Session.Puzzle.puzzleStatus.girlListCount / 2);
                                 }
-                                string newSplit = pair.girlDefinitionOne.girlName + " + " + pair.girlDefinitionTwo.girlName;
+                                string newSplit = pair.girlDefinitionOne.girlName + " & " + pair.girlDefinitionTwo.girlName;
                                 //don't put a number on the date if they started as lovers, or it's nonstop mode? (for 100%)
                                 if (startingRelationshipType != GirlPairRelationshipType.LOVERS
                                 && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP) newSplit += " #" + dateNum;
