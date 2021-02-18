@@ -39,8 +39,10 @@ namespace HP2SpeedrunMod
         public List<TimeSpan> comparison = new List<TimeSpan>();
         public List<TimeSpan> golds = new List<TimeSpan>();
         public string splitText;
+        public string prevText;
         public string goldText;
         public SplitColors splitColor;
+        public SplitColors prevColor;
         public SplitColors goldColor;
 
         public string finalRunDisplay = "";
@@ -134,24 +136,33 @@ namespace HP2SpeedrunMod
             }
         }
 
+        //convert a timespan to the proper format string
+        public string convert(TimeSpan time)
+        {
+            string val = "";
+            if (time.Hours != 0)
+                val += time.ToString(@"h\:mm\:ss\.f");
+            else if (time.Minutes != 0)
+                val += time.ToString(@"m\:ss\.f");
+            else
+                val += time.ToString(@"s\.f");
+            return val;
+        }
+
         public bool split()
         {
             splits.Add(runTimer.Elapsed);
             Datamining.Logger.LogMessage(runTimer.Elapsed.ToString());
-            splitColor = SplitColors.WHITE;
-            goldColor = SplitColors.WHITE;
-            goldText = "";
+            splitColor = SplitColors.WHITE; prevColor = SplitColors.WHITE; goldColor = SplitColors.WHITE;
+            splitText = ""; prevText = ""; goldText = "";
 
-            string val = "";
             TimeSpan s = splits[splits.Count - 1];
-            //having no minutes in your split time is literally never possible in this game
-            if (s.Hours > 0)
-                val = s.ToString(@"h\:mm\:ss\.f");
-            else
-                val = s.ToString(@"m\:ss\.f");
+            string val = convert(s);
 
             if (category != "")
             {
+                //create the affection meter replacement text
+                //time [+/-]
                 if (comparison.Count >= splits.Count)
                 {
                     val += " [";
@@ -167,19 +178,36 @@ namespace HP2SpeedrunMod
                         splitColor = SplitColors.BLUE;
                     }
 
-                    if (diff.Hours != 0)
-                        val += diff.ToString(@"h\:mm\:ss\.f");
-                    else if (diff.Minutes != 0)
-                        val += diff.ToString(@"m\:ss\.f");
-                    else
-                        val += diff.ToString(@"s\.f");
+                    val += convert(diff) + "]";
 
-                    val += "]";
+                    //create the this split text, which is just this split's diff minus the last split's diff
+                    TimeSpan diff2;
+                    if (splits.Count != 1)
+                    {
+                        TimeSpan s2 = splits[splits.Count - 2];
+                        diff2 = s2 - comparison[splits.Count - 2];
+                        diff2 = diff - diff2;
+                    }
+                    else
+                    {
+                        diff2 = diff;
+                    }
+                    if (diff2.TotalSeconds > 0)
+                    {
+                        prevText += "+";
+                        prevColor = SplitColors.RED;
+                    }
+                    else
+                    {
+                        prevText += "-";
+                        prevColor = SplitColors.BLUE;
+                    }
+                    prevText += convert(diff2);
                 }
 
+                //create the gold diff text
                 if (golds.Count >= splits.Count)
                 {
-                    goldText += "(";
                     //get segment length
                     if (splits.Count > 1) s = s - splits[splits.Count - 2];
                     TimeSpan diff = s - golds[splits.Count - 1];
@@ -193,13 +221,8 @@ namespace HP2SpeedrunMod
                     }
                     else
                         goldText += "+";
-                    if (diff.Hours != 0)
-                        goldText += diff.ToString(@"h\:mm\:ss\.f");
-                    else if (diff.Minutes != 0)
-                        goldText += diff.ToString(@"m\:ss\.f");
-                    else
-                        goldText += diff.ToString(@"s\.f");
-                    goldText += ")";
+                    goldText += convert(diff);
+
                 }
                 //no gold to compare with, or no category defined
                 else

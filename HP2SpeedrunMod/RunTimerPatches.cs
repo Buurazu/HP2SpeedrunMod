@@ -18,6 +18,7 @@ namespace HP2SpeedrunMod
     public class RunTimerPatches
     {
         public static int shoesProgress;
+        public static bool justFinishedDate = false;
         public static void Update()
         {
             if (!HP2SR.InGameTimer.Value || HP2SR.run == null) return;

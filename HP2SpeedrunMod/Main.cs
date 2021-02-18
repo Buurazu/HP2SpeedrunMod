@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Diagnostics;
 using DG.Tweening.Core;
 using System.Threading.Tasks;
+using DG.Tweening;
 
 namespace HP2SpeedrunMod
 {
@@ -314,12 +315,12 @@ namespace HP2SpeedrunMod
                 System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
             }
 
-                //if currently in a puzzle, and the status bar is up, send data to autosplitters
-                if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
+                //if currently in a puzzle, and the status bar is up, and it's not nonstop mode, send data to autosplitters
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive
+                && !Game.Session.gameCanvas.cellphone.isOpen && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP)
             {
                 UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
                 bool isBonusRound = Game.Session.Puzzle.puzzleStatus.bonusRound;
-                
                 if (status.affectionMeter.currentValue == 0)
                 {
                     startingRelationshipType = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Session.Location.currentGirlPair).relationshipType;
@@ -353,8 +354,36 @@ namespace HP2SpeedrunMod
                             {
                                 status.affectionMeter.valueLabelPro.richText = true;
                                 status.affectionMeter.valueLabelPro.text =
-                                "<color=" + RunTimer.colors[(int)run.splitColor] + ">" + run.splitText + "</color> " +
-                                "<color=" + RunTimer.colors[(int)run.goldColor] + ">" + run.goldText + "</color>";
+                                "<color=" + RunTimer.colors[(int)run.splitColor] + ">" + run.splitText + "</color>";
+                                
+                                Sequence seq = DOTween.Sequence();
+                                seq.Insert(0f, status.canvasGroupDate.DOFade(1, 0.32f).SetEase(Ease.Linear));
+                                seq.Insert(0f, status.canvasGroupLeft.DOFade(1, 0.32f).SetEase(Ease.Linear));
+                                seq.Insert(0f, status.canvasGroupRight.DOFade(1, 0.32f).SetEase(Ease.Linear));
+                                Game.Manager.Time.Play(seq, status.pauseBehavior.pauseDefinition, 0f);
+
+                                if (run.prevColor == RunTimer.SplitColors.BLUE)
+                                {
+                                    status.sentimentRollerRight.valueName = "THIS SPLIT";
+                                    status.sentimentRollerRight.maxName = "THIS SPLIT";
+                                    status.sentimentRollerRight.nameLabel.text = "THIS SPLIT";
+                                    status.sentimentRollerRight.valueLabelPro.text = run.prevText;
+                                }
+                                else if (run.prevColor == RunTimer.SplitColors.RED)
+                                {
+                                    status.passionRollerRight.valueName = "THIS SPLIT";
+                                    status.passionRollerRight.maxName = "THIS SPLIT";
+                                    status.passionRollerRight.nameLabel.text = "THIS SPLIT";
+                                    status.passionRollerRight.valueLabelPro.text = run.prevText;
+                                }
+
+                                if (run.goldText != "")
+                                {
+                                    status.movesRoller.valueName = "GOLD";
+                                    status.movesRoller.maxName = "GOLD";
+                                    status.movesRoller.nameLabel.text = "GOLD";
+                                    status.movesRoller.valueLabelPro.text = run.goldText;
+                                }
 
                                 GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
                                 int dateNum = 1;
