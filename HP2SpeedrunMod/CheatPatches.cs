@@ -10,6 +10,161 @@ namespace HP2SpeedrunMod
 {
     public class CheatPatches
     {
+
+        public static void Update()
+        {
+            if (!HP2SR.cheatsEnabled) return;
+            //add the quick transitions code if cheat mode is on
+            if (!Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
+
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                if (Game.Session.Location.currentLocation.locationType == LocationType.DATE)
+                {
+                    HP2SR.ShowNotif("Affection Filled!", 2);
+                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
+                    Game.Session.Puzzle.puzzleStatus.CheckChanges();
+                }
+                else
+                {
+                    HP2SR.ShowNotif("Fruit Given!", 2);
+                    Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.FLIRTATION, 100);
+                    Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.ROMANCE, 100);
+                    Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.SEXUALITY, 100);
+                    Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.TALENT, 100);
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.F2))
+            {
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas)
+                {
+                    HP2SR.ShowNotif("Stamina Gained!", 2);
+                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, false);
+                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, true);
+                    Game.Session.Puzzle.puzzleStatus.CheckChanges();
+                }
+            }
+
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            {
+                if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)
+                {
+                    CodeDefinition abiaHair = Game.Data.Codes.Get(HP2SR.ABIAHAIR);
+                    if (!Game.Persistence.playerData.unlockedCodes.Contains(abiaHair))
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Add(abiaHair);
+                        HP2SR.ShowNotif("Abia's hair enabled!", 0);
+                    }
+                    else
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Remove(abiaHair);
+                        HP2SR.ShowNotif("Abia's hair disabled!", 0);
+                    }
+                    foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                    {
+                        if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
+                    }
+                }
+
+                for (int i = (int)KeyCode.Alpha0; i <= (int)KeyCode.Alpha9; i++)
+                {
+                    //Alpha0 = 48, Keypad0 = 256
+                    int num = i - 48;
+
+                    if (!Game.Manager.Ui.currentCanvas.titleCanvas && (Input.GetKeyDown((KeyCode)i) || Input.GetKeyDown((KeyCode)(i + 208))))
+                    {
+                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                        {
+                            HP2SR.ShowThreeNotif("Changed to Outfit #" + num);
+                            doll.ChangeHairstyle(num);
+                            doll.ChangeOutfit(num);
+                        }
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.N))
+                {
+                    HP2SR.nudePatch = !HP2SR.nudePatch;
+                    if (HP2SR.nudePatch)
+                    {
+                        HP2SR.ShowNotif("AWOOOOOOOOOOGA", 2);
+                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                        {
+                            doll.partNipples.Show();
+                            doll.partOutfit.Hide();
+                        }
+                    }
+                    else
+                    {
+                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
+                        {
+                            doll.partNipples.Hide();
+                            doll.partOutfit.Show();
+                        }
+                    }
+
+                }
+
+                if (Input.GetKeyDown(KeyCode.M))
+                {
+                    if (!InputPatches.mashCheat) HP2SR.ShowThreeNotif("MASH POWER ACTIVATED");
+                    else HP2SR.ShowThreeNotif("Mash power deactivated");
+                    InputPatches.mashCheat = !InputPatches.mashCheat;
+                }
+
+                if (Input.GetKeyDown(KeyCode.L))
+                {
+                    //Datamining.LocationInfo();
+                    CodeDefinition codeDefinition = Game.Data.Codes.Get(16);
+                    if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
+                        HP2SR.ShowTooltip("Letterbox Code Enabled! (not that it does anything yet)", 2000);
+                    }
+                    else
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Remove(codeDefinition);
+                        HP2SR.ShowTooltip("Letterbox Code Disabled!", 2000);
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.G))
+                {
+                    Datamining.GetGirlData();
+                }
+
+                if (Input.GetKeyDown(KeyCode.D))
+                {
+                    Datamining.GetAllDialogTriggers();
+                    Datamining.GetAllCutsceneLines();
+                }
+            }
+
+            /*
+            i should still make a save toggle, on F3?
+            if (cheatsEnabled)
+            {
+
+                if (Input.GetKeyDown(KeyCode.F2))
+                {
+                    if (savingDisabled)
+                    {
+                        savingDisabled = false;
+                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Saving has been enabled");
+                    }
+                    else
+                    {
+                        savingDisabled = true;
+                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Saving has been disabled");
+                    }
+                }
+
+            }
+            */
+        }
+
         //unlock all 12 outfits. don't mess with toggle codes here
         public static void UnlockAllCodes()
         {

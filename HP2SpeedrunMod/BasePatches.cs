@@ -24,6 +24,11 @@ namespace HP2SpeedrunMod
             searchForMe = 123456789;
         }
 
+        public static void Update()
+        {
+
+        }
+
         //make pairs above the normal amount default to LOVERS
         [HarmonyPostfix]
         [HarmonyPatch(typeof(SaveFileGirlPair), "Reset")]
@@ -41,13 +46,10 @@ namespace HP2SpeedrunMod
         }
 
         //allow the disabled toggles (quick transitions, Abia's hair) to be added to the code list
-        //also, a partial fix for 4:3 resolutions
         [HarmonyPrefix]
         [HarmonyPatch(typeof(SettingManager), "Start")]
         public static bool CodeEnabler(ref Dictionary<string, CodeDefinition> ____unlockCodes)
         {
-            //partial fix for 4:3 resolutions
-            Game.Manager.Ui.currentCanvas.canvasScaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand;
             //enable the disabled codes muahaha
             List<CodeDefinition> all = Game.Data.Codes.GetAll();
             for (int i = 0; i < all.Count; i++)
@@ -57,7 +59,7 @@ namespace HP2SpeedrunMod
                     ____unlockCodes.Add(all[i].codeHash, all[i]);
                 }
             }
-            //remove the quick transitions code on boot
+            //remove all copies of the quick transitions code on boot
             while (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) {
                 Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
             }
@@ -79,7 +81,7 @@ namespace HP2SpeedrunMod
                     ____newSaveFileIndex = fileToDelete;
                 else
                     ____newSaveFileIndex = lastFile;
-                HP2SR.ShowTooltip("File #" + (____newSaveFileIndex + 1) + " will be deleted!", 4000, 0, 30);
+                HP2SR.ShowTooltip("File #" + (____newSaveFileIndex + 1) + " will be deleted!", 3000, 0, 30);
             }
             //all girl heads available
             for (int j = 0; j < __instance.fileIconSlots.Count; j++)
@@ -87,17 +89,15 @@ namespace HP2SpeedrunMod
                 __instance.fileIconSlots[j].Populate(false);
                 __instance.fileIconSlots[j].canvasGroup.blocksRaycasts = true;
             }
-            //randomly pick a girl head
+
             System.Random rand = new System.Random();
             int r = rand.Next(__instance.fileIconSlots.Count);
             ____selectedFileIconSlot = __instance.fileIconSlots[r];
             ____selectedFileIconSlot.button.Disable();
+
             //default Easy difficulty
-            __instance.settingSelectorDifficulty.Populate(Game.Manager.Settings.GetSettingValueNames("difficulty", MathUtils.IntToBool(__instance.settingSelectorGender.selectedIndex), 0), 0, false);
+            __instance.settingSelectorDifficulty.Populate(Game.Manager.Settings.GetSettingValueNames("difficulty", MathUtils.IntToBool(__instance.settingSelectorGender.selectedIndex), 0), HP2SR.lastChosenDifficulty, false);
             __instance.settingSelectorDifficulty.PopDescriptions(Game.Manager.Settings.GetSettingValueDescs("difficulty", MathUtils.IntToBool(__instance.settingSelectorGender.selectedIndex), 0));
-            //give the people what they want
-            //__instance.settingSelectorPolly.Populate(Game.Manager.Settings.GetSettingValueNames("polly", false, 0), 1, false);
-            //actually, I don't think the bulge helps youtube friendliness at all
 
             __instance.Refresh();
         }
@@ -106,7 +106,7 @@ namespace HP2SpeedrunMod
         //Also, erase the file we're about to start
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiCellphoneAppNew), "OnStartButtonPressed")]
-        public static void ClearReturnFlag(UiCellphoneAppNew __instance, ref int ____newSaveFileIndex)
+        public static void ClearReturnFlag(UiCellphoneAppNew __instance, ref int ____newSaveFileIndex, ref UiAppFileIconSlot ____selectedFileIconSlot)
         {
             Game.Persistence.playerData.files[____newSaveFileIndex] = new PlayerFile(new SaveFile());
             Game.Persistence.Apply(____newSaveFileIndex);
@@ -114,13 +114,23 @@ namespace HP2SpeedrunMod
 
             HP2SR.hasReturned = false;
             //alert the autosplitter
-            if (!HP2SR.hasReturned && !HP2SR.AllPairsEnabled.Value)
-                searchForMe = 111;
-            //just to make sure the quick transitions code is disabled
-            if (!HP2SR.cheatsEnabled)
+            if (!HP2SR.cheatsEnabled && !HP2SR.AllPairsEnabled.Value)
+            {
                 Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
+                searchForMe = 111;
+            }
+                
         }
 
+        //keep track of the difficulty selection
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppNew), "OnSettingSelectorChanged")]
+        public static void JustCheckingDifficulty(UiCellphoneAppNew __instance)
+        {
+            HP2SR.lastChosenDifficulty = __instance.settingSelectorDifficulty.selectedIndex;
+        }
+
+        //alert the autosplitter of a legitimate Return to Menu
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiCellphoneAppSettings), "OnReturnButtonPressed")]
         public static void LegitReturn()
@@ -155,7 +165,7 @@ namespace HP2SpeedrunMod
             return false;
         }
 
-        //during the custom tooltip time, prevent the tooltip text from changing or being respawned
+        //during custom tooltip time, prevent the tooltip text from changing or being respawned
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiTooltipSimple), "Populate")]
         public static bool PreventFileHover()
@@ -177,37 +187,6 @@ namespace HP2SpeedrunMod
             if (HP2SR.tooltipTimer.IsRunning) return false;
             return true;
         }
-
-
-        //Autosplitter related; coming soon
-        /*
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(PuzzleGame), "UpdateAffectionMeterDisplay")]
-        public static void AutosplitHelp(PuzzleGame __instance, ref int ____goalAffection)
-        {
-            if (HP2SR.cheatsEnabled || HP2SR.hasReturned) return;
-            if (__instance.currentDisplayAffection == ____goalAffection)
-                searchForMe = 100;
-            else searchForMe = 0;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(LoadScreen), "OnStartGameMale")]
-        public static void MaleStart()
-        {
-            if (!HP2SR.cheatsEnabled)
-                searchForMe = 111;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(LoadScreen), "OnStartGameFemale")]
-        public static void FemaleStart()
-        {
-            if (!HP2SR.cheatsEnabled)
-                searchForMe = 111;
-        }
-
-        */
 
         //quicker return to menu hotkey
         [HarmonyPrefix]
@@ -240,6 +219,7 @@ namespace HP2SpeedrunMod
             else return true;
         }
 
+        //allow any resolution to be picked by typing it as a code (undocumented feature)
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiCellphoneAppCode), "OnSubmitButtonPressed")]
         public static bool CustomResolutions(UiCellphoneAppCode __instance)

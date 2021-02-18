@@ -10,6 +10,7 @@ using System.Net;
 using System.Reflection;
 using System.Diagnostics;
 using DG.Tweening.Core;
+using System.Threading.Tasks;
 
 namespace HP2SpeedrunMod
 {
@@ -22,7 +23,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.3.1";
+        public const string PluginVersion = "1.4";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -36,6 +37,8 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<Boolean> KeyboardEnabled { get; private set; }
         public static ConfigEntry<Boolean> InputModsEnabled { get; private set; }
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
+        public static ConfigEntry<Boolean> InGameTimer { get; private set; }
+        public static ConfigEntry<int> SplitRules { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
         public static bool unloadingByHotkey = false;
@@ -61,8 +64,24 @@ namespace HP2SpeedrunMod
         public static int KyuHairstyle = 1;
         public static int KyuOutfit = 1;
 
+        public static RunTimer run;
+        public static bool splitThisDate = false;
+        GirlPairRelationshipType startingRelationshipType;
+        int startingCompletedPairs;
+
+        public static int lastChosenCategory = 0;
+        public static int lastChosenDifficulty = 0;
+
         private void Awake()
         {
+            InGameTimer = Config.Bind(
+                "Settings", nameof(InGameTimer),
+                true,
+                "Enable or disable the built-in timer (shows your time on the affection meter after each date)");
+            SplitRules = Config.Bind(
+                "Settings", nameof(SplitRules),
+                0,
+                "0 = Split on every date/bonus, 1 = Split only after dates, 2 = Split only after bonus rounds\n(You may want to delete your run comparison/golds after changing this. 1 Wing is excluded from this option)");
             ReturnToMenuEnabled = Config.Bind(
                 "Settings", nameof(ReturnToMenuEnabled),
                 true,
@@ -71,17 +90,14 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(ResetKey),
                 new KeyboardShortcut(KeyCode.F4),
                 "The hotkey to use for going back to the title");
-            
             CensorshipEnabled = Config.Bind(
                 "Settings", nameof(CensorshipEnabled),
                 true,
                 "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
-
             AutoDeleteFile = Config.Bind(
                 "Settings", nameof(AutoDeleteFile),
                 4,
                 "The file that will be erased on new game if all files are full");
-            
             MouseWheelEnabled = Config.Bind(
                 "Settings", nameof(MouseWheelEnabled),
                 true,
@@ -94,12 +110,10 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(InputModsEnabled),
                 true,
                 "Enable or disable all fake clicks");
-
             CheatHotkeyEnabled = Config.Bind(
                 "Settings", nameof(CheatHotkeyEnabled),
                 true,
                 "Enable or disable the cheat hotkey (C on main menu)");
-
             AllPairsEnabled = Config.Bind(
                 "Settings", nameof(AllPairsEnabled),
                 false,
@@ -116,6 +130,13 @@ namespace HP2SpeedrunMod
             //initiate the variable used for autosplitting
             BasePatches.InitSearchForMe();
 
+            //Create the splits files for the first time if they don't exist
+            if (!System.IO.Directory.Exists("splits"))
+            {
+                System.IO.Directory.CreateDirectory("splits");
+                System.IO.Directory.CreateDirectory("splits/data");
+            }
+
             //Check for a new update
             WebClient client = new WebClient();
             try
@@ -127,19 +148,14 @@ namespace HP2SpeedrunMod
             }
             catch (Exception e) { Logger.LogDebug("Couldn't read the pastebin! " + e.ToString()); }
 
-            //coming soon
-            /*
-            //Create the item names dictionary for easier rewarding of specific items
-            foreach (ItemDefinition item in HunieMod.Definitions.Items)
-            {
-                ItemNameList.Add(item.name, item.id);
-            }
-            */
             if (InputModsEnabled.Value)
             {
                 Harmony.CreateAndPatchAll(typeof(InputPatches), null);
             }
-
+            if (InGameTimer.Value)
+            {
+                Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
+            }
 
         }
 
@@ -160,9 +176,9 @@ namespace HP2SpeedrunMod
 
         void PlayGirlAudio(int i, int j, int k = -1, int l = -1)
         {
-            if (l >= 0) Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.Cutscenes.GetAll()[i].steps[j].branches[k].steps[l].dialogLine.audioClip);
-            else if (k >= 0) Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.DialogTriggers.GetAll()[i].dialogLineSets[j].dialogLines[k].audioClip);
-            else Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.Cutscenes.GetAll()[i].steps[j].dialogLine.audioClip);
+            if (l >= 0) Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.Cutscenes.GetAll()[i].steps[j].branches[k].steps[l].dialogLine.audioClip, null, 0.5f);
+            else if (k >= 0) Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.DialogTriggers.GetAll()[i].dialogLineSets[j].dialogLines[k].audioClip, null, 0.5f);
+            else Game.Manager.Audio.Play(AudioCategory.VOICE, Game.Data.Cutscenes.GetAll()[i].steps[j].dialogLine.audioClip, null, 0.5f);
         }
 
         void PlayCheatLine(int line = -1)
@@ -238,7 +254,6 @@ namespace HP2SpeedrunMod
         public bool UnloadGame()
         {
             //exceptions to when we are allowed to unload
-            //(we still need more, because occasionally returning during a cutscene causes undefined tweens to lock the game up)
             if (Game.Manager.Ui.currentCanvas.titleCanvas) { Logger.LogDebug("titleCanvas = no unloading"); return false; }
             if (Game.Session.Location.isTraveling) { Logger.LogDebug("isTraveling = no unloading"); return false; }
             if ((bool)AccessTools.Field(typeof(UiGameCanvas), "_unloadingGame").GetValue(Game.Session.gameCanvas)) { Logger.LogDebug("_unloadingGame = no unloading"); return false; }
@@ -276,10 +291,10 @@ namespace HP2SpeedrunMod
             tooltipTimer.Start();
         }
 
-        private void Update() // Another Unity method
+        private void Update() //called by Unity every frame
         {
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
-            InputPatches.prevHoriz = InputPatches.horiz; InputPatches.prevVert = InputPatches.vert;
+            BasePatches.Update(); CheatPatches.Update(); InputPatches.Update(); RunTimerPatches.Update(); 
 
             if (tooltip != null)
             {
@@ -293,27 +308,103 @@ namespace HP2SpeedrunMod
             //if tooltip became null, stop timer
             else tooltipTimer.Reset();
 
-            //add the quick transitions code if cheat mode is on
-            if (cheatsEnabled && !Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(QUICKTRANSITIONS)))
-                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(QUICKTRANSITIONS));
-
-            //send data to autosplitter
-            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
+            //if currently in a puzzle, and the status bar is up, send data to autosplitters
+            if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive && !Game.Session.gameCanvas.cellphone.isOpen)
             {
                 UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
-                bool isBonusRound = (bool)AccessTools.Field(typeof(PuzzleStatus), "_bonusRound").GetValue(Game.Session.Puzzle.puzzleStatus);
+                bool isBonusRound = Game.Session.Puzzle.puzzleStatus.bonusRound;
+                
+                if (status.affectionMeter.currentValue == 0)
+                {
+                    startingRelationshipType = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Session.Location.currentGirlPair).relationshipType;
+                    startingCompletedPairs = Game.Persistence.playerFile.completedGirlPairs.Count;
+                }
                 if (status.affectionMeter.currentValue == status.affectionMeter.maxValue)
                 {
-                    if (isBonusRound) BasePatches.searchForMe = 200;
+                    if (!splitThisDate && run != null)
+                    {
+                        bool didSplit = false;
+                        //always split for the two tutorial splits
+                        if (Game.Session.Location.currentGirlPair.girlDefinitionOne.girlName == "Kyu")
+                        {
+                            didSplit = run.split();
+                        }
+                        //don't split for dates in 48 Shoes, or in postgame
+                        else if (run.goal != 48 && Game.Persistence.playerFile.storyProgress < 13)
+                        {
+                            if (run.goal == 1 || SplitRules.Value <= 0) didSplit = run.split();
+                            else if (SplitRules.Value == 1 && !isBonusRound) didSplit = run.split();
+                            else if (SplitRules.Value == 2 && isBonusRound) didSplit = run.split();
+                            //check for final split regardless of option
+                            else if (isBonusRound && (run.goal == startingCompletedPairs + 1 ||
+                                        (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)))
+                                didSplit = run.split();
+                        }
+                        //this delay is both so the affection meter doesn't change instantly, and so that the variables can change as they need to
+                        if (didSplit)
+                        {
+                            Task.Delay(800).ContinueWith(t =>
+                            {
+                                status.affectionMeter.valueLabelPro.richText = true;
+                                status.affectionMeter.valueLabelPro.text =
+                                "<color=" + RunTimer.colors[(int)run.splitColor] + ">" + run.splitText + "</color> " +
+                                "<color=" + RunTimer.colors[(int)run.goldColor] + ">" + run.goldText + "</color>";
+
+                                GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
+                                int dateNum = 1;
+                                if (startingRelationshipType == GirlPairRelationshipType.ATTRACTED) dateNum = 2;
+                                if (isBonusRound) dateNum = 3;
+                                //Kyu pair starts at ATTRACTED (2) and her bonus should be 2, not 3, so this is the easiest way
+                                if (pair.girlDefinitionOne.girlName == "Kyu") dateNum--;
+                                if (Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)
+                                {
+                                    dateNum = 5 - (Game.Session.Puzzle.puzzleStatus.girlListCount / 2);
+                                }
+                                string newSplit = pair.girlDefinitionOne.girlName + " + " + pair.girlDefinitionTwo.girlName;
+                                //don't put a number on the date if they started as lovers, or it's nonstop mode? (for 100%)
+                                if (startingRelationshipType != GirlPairRelationshipType.LOVERS
+                                && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP) newSplit += " #" + dateNum;
+                                newSplit += "\n      " + run.splitText + "\n";
+                                run.push(newSplit);
+
+                                if (isBonusRound && pair.girlDefinitionOne.girlName != "Kyu")
+                                {
+                                    //I think it's possible that, with a huge chain reaction, completedGirlPairs.Count might not have updated yet
+                                    //so use the number from before the date, +1
+                                    //funnily enough, that also makes the final boss's goal of "25" count
+                                    //but I'll leave the double-check there
+                                    if (run.goal == startingCompletedPairs + 1 ||
+                                    (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS))
+                                    {
+                                        run.save();
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    if (isBonusRound)
+                    {
+                        BasePatches.searchForMe = 200;
+                    }
                     else BasePatches.searchForMe = 100;
+
+                    splitThisDate = true;
                 }
                     
                 else
+                {
                     BasePatches.searchForMe = 0;
+                    splitThisDate = false;
+                }
+                    
             }
 
+            //title-screen only options, to prevent non-vanilla things happening midrun
             if (Game.Manager.Ui.currentCanvas.titleCanvas)
             {
+                UiTitleCanvas tc = (UiTitleCanvas)Game.Manager.Ui.currentCanvas;
+                bool isLoading = (bool)AccessTools.Field(typeof(UiTitleCanvas), "_loadingGame").GetValue(tc);
                 //display New Version tooltip for 10 seconds
                 if (newVersionAvailable && !alertedOfUpdate)
                 {
@@ -335,7 +426,6 @@ namespace HP2SpeedrunMod
                         ShowTooltip("Abia's Hair Disabled!", 2000);
                     }
                     Game.Manager.Ui.currentCanvas.GetComponent<UiTitleCanvas>().coverArt.Refresh();
-                    
                 }
 
                 //check for Kyu outfits
@@ -359,178 +449,32 @@ namespace HP2SpeedrunMod
                 }
 
                 //check for the Cheat Mode hotkey
-                if (CheatHotkeyEnabled.Value && cheatsEnabled == false && Input.GetKeyDown(KeyCode.C))
+                if (CheatHotkeyEnabled.Value && cheatsEnabled == false && !isLoading && Input.GetKeyDown(KeyCode.C))
                 {
                     Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxReject);
                     PlayCheatLine();
                     Harmony.CreateAndPatchAll(typeof(CheatPatches), null);
-                    Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(QUICKTRANSITIONS));
                     CheatPatches.UnlockAllCodes();
                     ShowTooltip("Cheat Mode Activated!", 2000, 0, 30);
                     cheatsEnabled = true;
                 }
             }
 
-            if (ReturnToMenuEnabled.Value)
+            //Check for the Return hotkey
+            if (ReturnToMenuEnabled.Value && ResetKey.Value.IsDown())
             {
-                if (ResetKey.Value.IsDown())
+                if (UnloadGame())
                 {
-                    if (UnloadGame())
+                    hasReturned = true;
+                    BasePatches.searchForMe = -111;
+                    if (run != null)
                     {
-                        hasReturned = true;
-                        BasePatches.searchForMe = -111;
+                        run.reset();
+                        run = null;
                     }
                 }
             }
 
-            if (cheatsEnabled)
-            {
-                if (Input.GetKeyDown(KeyCode.F1))
-                {
-                    if (Game.Session.Location.currentLocation.locationType == LocationType.DATE)
-                    {
-                        ShowNotif("Affection Filled!", 2);
-                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
-                        Game.Session.Puzzle.puzzleStatus.CheckChanges();
-                    }
-                    else
-                    {
-                        ShowNotif("Fruit Given!", 2);
-                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.FLIRTATION, 100);
-                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.ROMANCE, 100);
-                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.SEXUALITY, 100);
-                        Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.TALENT, 100);
-                    }
-                }
-
-                if (Input.GetKeyDown(KeyCode.F2))
-                {
-                    if (!Game.Manager.Ui.currentCanvas.titleCanvas) {
-                        ShowNotif("Stamina Gained!", 2);
-                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, false);
-                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, true);
-                        Game.Session.Puzzle.puzzleStatus.CheckChanges();
-                    }
-                }
-
-                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
-                {
-                    if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)
-                    {
-                        CodeDefinition abiaHair = Game.Data.Codes.Get(ABIAHAIR);
-                        if (!Game.Persistence.playerData.unlockedCodes.Contains(abiaHair))
-                        {
-                            Game.Persistence.playerData.unlockedCodes.Add(abiaHair);
-                            ShowNotif("Abia's hair enabled!", 0);
-                        }
-                        else
-                        {
-                            Game.Persistence.playerData.unlockedCodes.Remove(abiaHair);
-                            ShowNotif("Abia's hair disabled!", 0);
-                        }
-                        foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                        {
-                            if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
-                        }
-                    }
-
-                    for (int i = (int)KeyCode.Alpha0; i <= (int)KeyCode.Alpha9; i++)
-                    {
-                        //Alpha0 = 48, Keypad0 = 256
-                        int num = i - 48;
-
-                        if (!Game.Manager.Ui.currentCanvas.titleCanvas && (Input.GetKeyDown((KeyCode)i) || Input.GetKeyDown((KeyCode)(i+208))))
-                        {
-                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                            {
-                                ShowThreeNotif("Changed to Outfit #" + num);
-                                doll.ChangeHairstyle(num);
-                                doll.ChangeOutfit(num);
-                            }
-                        }
-                    }
-
-                    if (Input.GetKeyDown(KeyCode.N))
-                    {
-                        nudePatch = !nudePatch;
-                        if (nudePatch)
-                        {
-                            ShowNotif("AWOOOOOOOOOOGA", 2);
-                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                            {
-                                doll.partNipples.Show();
-                                doll.partOutfit.Hide();
-                            }
-                        }
-                        else
-                        {
-                            foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                            {
-                                doll.partNipples.Hide();
-                                doll.partOutfit.Show();
-                            }
-                        }
-                            
-                    }
-
-                    if (Input.GetKeyDown(KeyCode.M))
-                    {
-                        if (!InputPatches.mashCheat) ShowThreeNotif("MASH POWER ACTIVATED");
-                        else ShowThreeNotif("Mash power deactivated");
-                        InputPatches.mashCheat = !InputPatches.mashCheat;
-                    }
-                    
-                    if (Input.GetKeyDown(KeyCode.L))
-                    {
-                        //Datamining.LocationInfo();
-                        CodeDefinition codeDefinition = Game.Data.Codes.Get(16);
-                        if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
-                        {
-                            Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
-                            ShowTooltip("Letterbox Enabled!", 2000);
-                        }
-                        else
-                        {
-                            Game.Persistence.playerData.unlockedCodes.Remove(codeDefinition);
-                            ShowTooltip("Letterbox Disabled!", 2000);
-                        }
-                    }
-
-                    if (Input.GetKeyDown(KeyCode.G))
-                    {
-                        Datamining.GetGirlData();
-                    }
-
-                    if (Input.GetKeyDown(KeyCode.D))
-                    {
-                        Datamining.GetAllDialogTriggers();
-                        Datamining.GetAllCutsceneLines();
-                    }
-                }
-
-                
-            }
-            /*
-            i should still make a save toggle, on F3?
-            if (cheatsEnabled)
-            {
-
-                if (Input.GetKeyDown(KeyCode.F2))
-                {
-                    if (savingDisabled)
-                    {
-                        savingDisabled = false;
-                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Saving has been enabled");
-                    }
-                    else
-                    {
-                        savingDisabled = true;
-                        GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Saving has been disabled");
-                    }
-                }
-
-            }
-            */
         }
 
         /// <summary>

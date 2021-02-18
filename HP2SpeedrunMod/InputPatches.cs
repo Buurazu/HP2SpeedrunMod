@@ -20,6 +20,13 @@ namespace HP2SpeedrunMod
 
         public static bool mashCheat = false;
 
+        public static void Update()
+        {
+            if (!HP2SR.InputModsEnabled.Value) return;
+            InputPatches.prevHoriz = InputPatches.horiz;
+            InputPatches.prevVert = InputPatches.vert;
+        }
+
         public static bool IsMouseKeyDown()
         {
             if (mashCheat) return true;
