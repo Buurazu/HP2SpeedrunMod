@@ -154,7 +154,7 @@ namespace HP2SpeedrunMod
         public bool split()
         {
             splits.Add(runTimer.Elapsed);
-            Datamining.Logger.LogMessage(runTimer.Elapsed.ToString());
+            //Datamining.Logger.LogMessage(runTimer.Elapsed.ToString());
             splitColor = SplitColors.WHITE; prevColor = SplitColors.WHITE; goldColor = SplitColors.WHITE;
             splitText = ""; prevText = ""; goldText = "";
 
@@ -235,7 +235,7 @@ namespace HP2SpeedrunMod
             }
 
             splitText = val;
-            Datamining.Logger.LogMessage(splitText + " " + goldText);
+            //Datamining.Logger.LogMessage(splitText + " " + goldText);
             return true;
         }
 
@@ -286,7 +286,7 @@ namespace HP2SpeedrunMod
                     }
                     File.WriteAllLines(target, spansToStrings(golds));
                 }
-                Datamining.Logger.LogMessage("writing PB Attempt.txt");
+                //Datamining.Logger.LogMessage("writing PB Attempt.txt");
                 File.WriteAllText("splits/" + category + " Last Attempt.txt", finalRunDisplay);
                 lastSavedSplitsPath = "splits/" + category + " Last Attempt.txt";
             }
@@ -323,7 +323,7 @@ namespace HP2SpeedrunMod
         public void push(string s)
         {
             finalRunDisplay += s;
-            Datamining.Logger.LogMessage(finalRunDisplay);
+            //Datamining.Logger.LogMessage(finalRunDisplay);
         }
 
         private string[] spansToStrings(List<TimeSpan> list)

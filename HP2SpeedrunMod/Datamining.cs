@@ -353,7 +353,145 @@ namespace HP2SpeedrunMod
             LA, LN, AP, AL, SL, JL
         }
 
+        private static int AddToFinderLists(List<GirlPairDefinition> girlPairList, List<LocationDefinition> locationList, GirlPairDefinition girlPairDef, LocationDefinition locationDef, List<PlayerFileGirlPair> fileGirlPairs)
+        {
+            if (girlPairList != null && !girlPairList.Contains(girlPairDef))
+            {
+                girlPairList.Add(girlPairDef);
+                if (locationList != null && (locationDef == null || !locationList.Contains(locationDef)))
+                {
+                    locationList.Add(locationDef);
+                }
+            }
+            for (int i = 0; i < fileGirlPairs.Count; i++)
+            {
+                if (fileGirlPairs[i].girlPairDefinition.girlDefinitionOne == girlPairDef.girlDefinitionOne || fileGirlPairs[i].girlPairDefinition.girlDefinitionTwo == girlPairDef.girlDefinitionOne || fileGirlPairs[i].girlPairDefinition.girlDefinitionOne == girlPairDef.girlDefinitionTwo || fileGirlPairs[i].girlPairDefinition.girlDefinitionTwo == girlPairDef.girlDefinitionTwo)
+                {
+                    fileGirlPairs.RemoveAt(i);
+                    i--;
+                }
+            }
+            return -1;
+        }
+
         public static void TestAllPermutations()
+        {
+            PlayerFile file = Game.Persistence.playerFile;
+            List<GirlPairDefinition> allPairs = Game.Data.GirlPairs.GetAllBySpecial(false);
+            List<int> possiblePairs = new List<int>();
+            Dictionary<int, int> occurences = new Dictionary<int, int>();
+            Dictionary<int, int> phaseoccurences = new Dictionary<int, int>();
+            phaseoccurences.Add((int)ClockDaytimeType.MORNING, 0);
+            phaseoccurences.Add((int)ClockDaytimeType.AFTERNOON, 0);
+            phaseoccurences.Add((int)ClockDaytimeType.EVENING, 0);
+            phaseoccurences.Add((int)ClockDaytimeType.NIGHT, 0);
+            Dictionary<GirlDefinition, bool> impossibleGirls = new Dictionary<GirlDefinition, bool>();
+            foreach (GirlPairDefinition p in allPairs)
+            {
+                //ignore pairs that have a girl I'm currently with
+                if (file.girlPairDefinition && (file.girlPairDefinition.girlDefinitionOne == p.girlDefinitionOne || file.girlPairDefinition.girlDefinitionTwo == p.girlDefinitionOne ||
+                    file.girlPairDefinition.girlDefinitionOne == p.girlDefinitionTwo || file.girlPairDefinition.girlDefinitionTwo == p.girlDefinitionTwo))
+                    continue;
+                //ignore pairs who meet where i'm at currently
+                if (file.GetPlayerFileGirlPair(p).relationshipType == GirlPairRelationshipType.UNKNOWN && p.meetingLocationDefinition == file.locationDefinition)
+                    continue;
+                //ignore pairs with no known girl
+                if (!file.GetPlayerFileGirl(p.girlDefinitionOne).playerMet && !file.GetPlayerFileGirl(p.girlDefinitionTwo).playerMet)
+                    continue;
+                //ignore lovers, and attracted pairs that can't fuck
+                if (file.GetPlayerFileGirlPair(p).relationshipType == GirlPairRelationshipType.LOVERS)
+                    continue;
+                if (file.GetPlayerFileGirlPair(p).relationshipType == GirlPairRelationshipType.ATTRACTED && (file.daytimeElapsed + 1) % 4 != (int)p.sexDaytime)
+                    continue;
+                //non-intro pairs require us to have met both girls
+                if (!p.introductionPair && (!file.GetPlayerFileGirl(p.girlDefinitionOne).playerMet || !file.GetPlayerFileGirl(p.girlDefinitionTwo).playerMet))
+                    continue;
+                //in the end our pair list should have: DTF pairs, valid intro and new pairs, and compatible pairs
+                possiblePairs.Add(p.id);
+                occurences.Add(p.id, 0);
+            }
+            //we now have the shuffled list of every order of girl pairs that could possibly exist. (line 17 of populatefinderslots, but smaller)
+            //now just check through each like the game does
+            //11 pairs = 39,916,800 permutations. This is too much
+            if (possiblePairs.Count >= 11)
+            {
+                Logger.LogDebug("Number of possible pairs is too large to permute! (" + possiblePairs.Count + ")");
+                return;
+            }
+            IList<IList<int>> permutations = Permute(possiblePairs.ToArray());
+            Logger.LogDebug("Total permutations: " + permutations.Count);
+            string str = "";
+
+            foreach (IList<int> i in permutations)
+            {
+                //convert the permutated ints back into a girl pair list
+                List<PlayerFileGirlPair> list = new List<PlayerFileGirlPair>();
+                foreach (int j in i) list.Add(file.GetPlayerFileGirlPair(Game.Data.GirlPairs.Get(j)));
+                //blank lists used to keep track of selected pairs and definitions
+                List<GirlPairDefinition> list2 = new List<GirlPairDefinition>();
+                List<LocationDefinition> list3 = new List<LocationDefinition>();
+                
+                //this code has some extraneous checks removed, because we already handled those checks earlier
+                //like if we've met either girl or if the attracted pair is DTF
+                for (int l = 0; l < list.Count; l++)
+                {
+                    if (list[l].relationshipType == GirlPairRelationshipType.ATTRACTED)
+                    {
+                        l = AddToFinderLists(list2, list3, list[l].girlPairDefinition, null, list);
+                    }
+                }
+                for (int m = 0; m < list.Count; m++)
+                {
+                    if (list[m].relationshipType == GirlPairRelationshipType.UNKNOWN && list[m].girlPairDefinition.introductionPair && !list3.Contains(list[m].girlPairDefinition.meetingLocationDefinition))
+                    {
+                        m = AddToFinderLists(list2, list3, list[m].girlPairDefinition, list[m].girlPairDefinition.meetingLocationDefinition, list);
+                    }
+                }
+                for (int n = 0; n < list.Count; n++)
+                {
+                    if ((list[n].relationshipType == GirlPairRelationshipType.UNKNOWN && !list[n].girlPairDefinition.introductionPair && !list3.Contains(list[n].girlPairDefinition.meetingLocationDefinition)) || list[n].relationshipType == GirlPairRelationshipType.COMPATIBLE)
+                    {
+                        n = AddToFinderLists(list2, list3, list[n].girlPairDefinition, (list[n].relationshipType == GirlPairRelationshipType.UNKNOWN) ? list[n].girlPairDefinition.meetingLocationDefinition : null, list);
+                    }
+                }
+
+                //list2 is now all the girls
+                string testOutput = "";
+                int[] foundtimes = new int[4];
+                foreach (GirlPairDefinition gpd in list2) { 
+                    testOutput += gpd.girlDefinitionOne.girlName + "&" + gpd.girlDefinitionTwo.girlName + ", ";
+                    occurences[gpd.id] = occurences[gpd.id] + 1;
+                    //i think the sex daytime info is only useful if it's not a DTF pair
+                    if (file.GetPlayerFileGirlPair(gpd).relationshipType != GirlPairRelationshipType.ATTRACTED) foundtimes[(int)gpd.sexDaytime] += 1;
+                }
+                for (int t = 0; t <= 3; t++)
+                {
+                    if (foundtimes[t] > 0)
+                    {
+                        phaseoccurences[t] = phaseoccurences[t] + 1;
+                    }
+                }
+                //Logger.LogDebug(testOutput);
+            }
+            //this is so lazy lol
+            for (int i = 0; i < 30; i++)
+            {
+                if (occurences.ContainsKey(i) && occurences[i] > 0)
+                    str += Game.Data.GirlPairs.Get(i).girlDefinitionOne.girlName + " & " + Game.Data.GirlPairs.Get(i).girlDefinitionTwo.girlName + 
+                        //" (" + file.GetPlayerFileGirlPair(Game.Data.GirlPairs.Get(i)).relationshipType + ")" +
+                        ": " + occurences[i] + "/" + permutations.Count + " (" + ((occurences[i] / (float)permutations.Count)*100).ToString("F") + "%)\n";
+            }
+            str += "\n";
+            for (int i = 0; i <= 3; i++)
+            {
+                str += "New " + (ClockDaytimeType)i + " Sex Pair Chance: " +
+                    phaseoccurences[i] + "/" + permutations.Count + " (" + ((phaseoccurences[i] / (float)permutations.Count) * 100).ToString("F") + "%)\n";
+            }
+
+            Logger.LogMessage(str);
+        }
+
+        public static void TestAllPermutationsOld()
         {
             int[] options = new int[] { 0, 1, 2, 3, 4, 5 };
             IList<IList<int>> permutations = Permute(options);

@@ -140,6 +140,18 @@ namespace HP2SpeedrunMod
                     Datamining.GetAllDialogTriggers();
                     Datamining.GetAllCutsceneLines();
                 }
+
+                if (Input.GetKeyDown(KeyCode.R))
+                {
+                    PlayerFileGirlPair thePair = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Persistence.playerFile.girlPairDefinition);
+                    if (thePair.relationshipType != GirlPairRelationshipType.LOVERS)
+                    {
+                        thePair.relationshipType++;
+                        HP2SR.ShowThreeNotif("Relationship Leveled Up to " + thePair.relationshipType + "!");
+                        UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
+                        status.Refresh();
+                    }
+                }
             }
 
             /*
@@ -267,7 +279,14 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(LocationTransition), "Arrive")]
         public static void AlwaysArriveWithGirls(ref bool arriveWithGirls)
         {
-            arriveWithGirls = true;
+            if (Game.Session.Location.currentLocation.id <= 8) arriveWithGirls = true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlayerFile), "PopulateFinderSlots")]
+        public static void DumbPermutationShit()
+        {
+            Datamining.TestAllPermutations();
         }
 
         //item cheats and tutorial skip and more coming soon
