@@ -27,7 +27,9 @@ namespace HP2SpeedrunMod
         public static Color32[] outlineColors = new Color32[] { new Color32(98, 149, 252, 255), new Color(229, 36, 36, 255), new Color(240, 176, 18, 255) };
         //too dark
         //public static string[] darkColors = new string[] { "#ffffff", "#4bb7e8", "#e24c3c", "#ddaf4c" };
-        public static string[] colors = new string[] { "#ffffff", "#d6e9ff", "#ffcccc", "#ddaf4c" };
+        //taken directly from the seed counts; too light
+        //public static string[] colors = new string[] { "#ffffff", "#d6e9ff", "#ffcccc", "#ddaf4c" };
+        public static string[] colors = new string[] { "#ffffff", "#b2d6ff", "#ffb2b2", "#ddaf4c" };
 
         public static string lastSavedSplitsPath = "";
 

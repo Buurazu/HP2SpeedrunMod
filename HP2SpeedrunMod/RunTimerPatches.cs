@@ -45,7 +45,7 @@ namespace HP2SpeedrunMod
                 status.affectionMeter.valueLabelPro.richText = true;
                 status.affectionMeter.valueLabelPro.text =
                 "<color=" + RunTimer.colors[(int)run.splitColor] + ">" + run.splitText + "</color> " +
-                "<color=" + RunTimer.colors[(int)run.goldColor] + ">" + run.goldText + "</color>";
+                "<color=" + RunTimer.colors[(int)run.goldColor] + ">(" + run.goldText + ")</color>";
 
                 Task.Delay(5000).ContinueWith(t =>
                 {

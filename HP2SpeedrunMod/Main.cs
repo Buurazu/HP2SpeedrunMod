@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.4";
+        public const string PluginVersion = "1.4.1";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -350,7 +350,7 @@ namespace HP2SpeedrunMod
                         //this delay is both so the affection meter doesn't change instantly, and so that the variables can change as they need to
                         if (didSplit)
                         {
-                            Task.Delay(800).ContinueWith(t =>
+                            Task.Delay(1000).ContinueWith(t =>
                             {
                                 status.affectionMeter.valueLabelPro.richText = true;
                                 status.affectionMeter.valueLabelPro.text =
@@ -383,6 +383,19 @@ namespace HP2SpeedrunMod
                                     status.movesRoller.maxName = "GOLD";
                                     status.movesRoller.nameLabel.text = "GOLD";
                                     status.movesRoller.valueLabelPro.text = run.goldText;
+                                }
+                                //don't undo my changes if it's a bonus round, there's no stats to return to
+                                if (!isBonusRound)
+                                {
+                                    Task.Delay(5000).ContinueWith(t2 =>
+                                    {
+                                        status.sentimentRollerRight.valueName = "SENTIMENT"; status.sentimentRollerRight.maxName = "SENTI... • MAX";
+                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.sentimentRollerRight, null);
+                                        status.passionRollerRight.valueName = "PASSION"; status.passionRollerRight.maxName = "PASSION • MAX";
+                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.passionRollerRight, null);
+                                        status.movesRoller.valueName = "MOVES"; status.movesRoller.maxName = "MOVES • MAX";
+                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.movesRoller, null);
+                                    });
                                 }
 
                                 GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
