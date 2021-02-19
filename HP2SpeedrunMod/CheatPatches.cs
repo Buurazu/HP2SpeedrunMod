@@ -204,6 +204,72 @@ namespace HP2SpeedrunMod
             //__instance.nameLabel.text = "    " + girlDefinition.GetNickName().ToUpper();
         }
 
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCellphoneAppNew), "OnStartButtonPressed")]
+        public static void SkipTutorialOnArrival()
+        {
+            //skip to inside the airplane, it has special properties
+            Game.Persistence.playerFile.locationDefinition = Game.Data.Locations.Get(25);
+            //give our first date fruits
+            Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.FLIRTATION, 5);
+            Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.ROMANCE, 5);
+            Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.SEXUALITY, 5);
+            Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.TALENT, 5);
+            //ashley is added first
+            Game.Persistence.playerFile.GetPlayerFileGirl(Game.Data.Girls.Get(10));
+            for (int i = 1; i <= 12; i++)
+            {
+                Game.Persistence.playerFile.GetPlayerFileGirl(Game.Data.Girls.Get(i));
+            }
+            //set ashley, lola, lailani to met
+            Game.Persistence.playerFile.girls[0].playerMet = true;
+            Game.Persistence.playerFile.girls[1].playerMet = true;
+            Game.Persistence.playerFile.girls[6].playerMet = true;
+            Game.Persistence.playerFile.PushDaytimeTo(ClockDaytimeType.MORNING);
+            //gift us the fox plush into slot 1
+            Game.Persistence.playerFile.GetPlayerFileInventorySlot(1).itemDefinition = Game.Data.Items.Get(52);
+            Game.Persistence.playerFile.GetPlayerFileInventorySlot(1).daytimeStamp = Game.Persistence.playerFile.daytimeElapsed;
+            //use test mode to instantly appear in hub
+            AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, true);
+            Game.Persistence.SaveGame();
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiTitleCanvas), "LoadGame")]
+        public static void SkipStoryCutscene(ref string loadSceneName)
+        {
+            if (loadSceneName == "StoryScene") loadSceneName = "MainScene";
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(LocationManager), "OnArrivalComplete")]
+        public static bool TutorialAndCutsceneSkips(LocationManager __instance, ref LocationDefinition ____currentLocation, ref CutsceneDefinition ____arrivalCutscene)
+        {
+            //if arriving to airplane, skip to hub
+            if (____currentLocation.id == 25)
+            {
+                __instance.Depart(Game.Data.Locations.Get(21), null);
+                AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, false);
+                return false;
+            }
+            //skip arrival cutscenes for the SIM locations which are 1 through 8
+            else if (____currentLocation.id <= 8 && ____arrivalCutscene != null)
+            {
+                ____arrivalCutscene = null;
+            }
+            
+            return true;
+            
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(LocationTransition), "Arrive")]
+        public static void AlwaysArriveWithGirls(ref bool arriveWithGirls)
+        {
+            arriveWithGirls = true;
+        }
+
         //item cheats and tutorial skip and more coming soon
         /*
         public static void AddItem(string theItem, InventoryItemPlayerData[] target = null)

@@ -295,7 +295,13 @@ namespace HP2SpeedrunMod
         private void Update() //called by Unity every frame
         {
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
-            BasePatches.Update(); CheatPatches.Update(); InputPatches.Update(); RunTimerPatches.Update(); 
+            BasePatches.Update(); CheatPatches.Update(); InputPatches.Update(); RunTimerPatches.Update();
+
+            //Datamining.Logger.LogDebug("playerFile story progress: " + Game.Persistence.playerFile.storyProgress);
+            foreach (PlayerFileGirl g in Game.Persistence.playerFile.girls)
+            {
+                //Logger.LogDebug(g.girlDefinition.girlName);
+            }
 
             if (tooltip != null)
             {
