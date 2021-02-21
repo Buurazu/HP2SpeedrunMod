@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.4.1";
+        public const string PluginVersion = "1.5";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -40,6 +40,7 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
         public static ConfigEntry<Boolean> InGameTimer { get; private set; }
         public static ConfigEntry<int> SplitRules { get; private set; }
+        public static ConfigEntry<Boolean> CapAt144 { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
         public static bool unloadingByHotkey = false;
@@ -75,14 +76,22 @@ namespace HP2SpeedrunMod
 
         private void Awake()
         {
+            CapAt144 = Config.Bind(
+                "Settings", nameof(CapAt144),
+                true,
+                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster (especially on Hard)");
             InGameTimer = Config.Bind(
                 "Settings", nameof(InGameTimer),
                 true,
-                "Enable or disable the built-in timer (shows your time on the affection meter after each date)");
+                "Enable or disable the built-in timer (shows your time on the affection meter after each date, read the readme for more info)");
             SplitRules = Config.Bind(
                 "Settings", nameof(SplitRules),
                 0,
                 "0 = Split on every date/bonus, 1 = Split only after dates, 2 = Split only after bonus rounds\n(You may want to delete your run comparison/golds after changing this. 1 Wing is excluded from this option)");
+            CensorshipEnabled = Config.Bind(
+                "Settings", nameof(CensorshipEnabled),
+                true,
+                "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
             ReturnToMenuEnabled = Config.Bind(
                 "Settings", nameof(ReturnToMenuEnabled),
                 true,
@@ -91,10 +100,6 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(ResetKey),
                 new KeyboardShortcut(KeyCode.F4),
                 "The hotkey to use for going back to the title");
-            CensorshipEnabled = Config.Bind(
-                "Settings", nameof(CensorshipEnabled),
-                true,
-                "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
             AutoDeleteFile = Config.Bind(
                 "Settings", nameof(AutoDeleteFile),
                 4,
@@ -125,6 +130,12 @@ namespace HP2SpeedrunMod
         {
             //I can't believe the game doesn't run in background by default
             Application.runInBackground = true;
+            //allow max 144fps
+            QualitySettings.vSyncCount = 0;
+            if (CapAt144.Value)
+                Application.targetFrameRate = 144;
+            else
+                Application.targetFrameRate = 60;
 
             Harmony.CreateAndPatchAll(typeof(BasePatches), null);
             Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
@@ -292,6 +303,12 @@ namespace HP2SpeedrunMod
             tooltipTimer.Start();
         }
 
+        private void OnApplicationQuit()
+        {
+            //save golds on the way out
+            if (run != null)
+                run.reset();
+        }
         private void Update() //called by Unity every frame
         {
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
@@ -314,6 +331,21 @@ namespace HP2SpeedrunMod
             }
             //if tooltip became null, stop timer
             else tooltipTimer.Reset();
+
+            //Check for the Return hotkey
+            if (ReturnToMenuEnabled.Value && ResetKey.Value.IsDown())
+            {
+                if (UnloadGame())
+                {
+                    hasReturned = true;
+                    BasePatches.searchForMe = -111;
+                    if (run != null)
+                    {
+                        run.reset();
+                        run = null;
+                    }
+                }
+            }
 
             //display the splits folder on Ctrl+S
             if (Input.GetKeyDown(KeyCode.S) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
@@ -511,21 +543,6 @@ namespace HP2SpeedrunMod
                     CheatPatches.UnlockAllCodes();
                     ShowTooltip("Cheat Mode Activated!", 2000, 0, 30);
                     cheatsEnabled = true;
-                }
-            }
-
-            //Check for the Return hotkey
-            if (ReturnToMenuEnabled.Value && ResetKey.Value.IsDown())
-            {
-                if (UnloadGame())
-                {
-                    hasReturned = true;
-                    BasePatches.searchForMe = -111;
-                    if (run != null)
-                    {
-                        run.reset();
-                        run = null;
-                    }
                 }
             }
 

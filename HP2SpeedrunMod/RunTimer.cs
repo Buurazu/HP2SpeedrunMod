@@ -1,20 +1,14 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using BepInEx;
 using UnityEngine;
-using HarmonyLib;
-using BepInEx.Configuration;
 using System.Collections.Generic;
-using System.Net;
-using System.Reflection;
 using System.Diagnostics;
-using DG.Tweening.Core;
 
 namespace HP2SpeedrunMod
 {
     public class RunTimer
     {
+        public static BepInEx.Logging.ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("RunTimer");
         public enum SplitColors
         {
             WHITE, BLUE, RED, GOLD
@@ -30,8 +24,6 @@ namespace HP2SpeedrunMod
         //taken directly from the seed counts; too light
         //public static string[] colors = new string[] { "#ffffff", "#d6e9ff", "#ffcccc", "#ddaf4c" };
         public static string[] colors = new string[] { "#ffffff", "#b2d6ff", "#ffb2b2", "#ddaf4c" };
-
-        public static string lastSavedSplitsPath = "";
 
         public Stopwatch runTimer;
         public int runFile;
@@ -49,6 +41,18 @@ namespace HP2SpeedrunMod
 
         public string finalRunDisplay = "";
 
+        //convert a timespan to the proper format string
+        public static string convert(TimeSpan time)
+        {
+            string val = "";
+            if (time.Hours != 0)
+                val += time.ToString(@"h\:mm\:ss\.f");
+            else if (time.Minutes != 0)
+                val += time.ToString(@"m\:ss\.f");
+            else
+                val += time.ToString(@"s\.f");
+            return val;
+        }
         public static string GetAll(int cat, int difficulty)
         {
             if (cat >= categories.Length || difficulty >= difficulties.Length) return "N/A";
@@ -64,10 +68,7 @@ namespace HP2SpeedrunMod
                 string[] textFile = File.ReadAllLines(target);
                 //saved comparison is longer than our new one
                 TimeSpan s = TimeSpan.Parse(textFile[textFile.Length - 1]);
-                if (s.Hours > 0)
-                    val = s.ToString(@"h\:mm\:ss\.f");
-                else
-                    val = s.ToString(@"m\:ss\.f");
+                val = convert(s);
             }
             return val;
         }
@@ -84,10 +85,7 @@ namespace HP2SpeedrunMod
                 {
                     s += TimeSpan.Parse(line);
                 }
-                if (s.Hours > 0)
-                    val = s.ToString(@"h\:mm\:ss\.f");
-                else
-                    val = s.ToString(@"m\:ss\.f");
+                val = convert(s);
             }
             return val;
         }
@@ -110,7 +108,6 @@ namespace HP2SpeedrunMod
                 category = categories[cat] + " " + difficulties[difficulty];
                 goal = goals[cat];
 
-                Datamining.Logger.LogMessage("new run: save file #" + runFile + " ," + category + " ," + goal);
                 //search for comparison splits
                 string target = "splits/data/" + category + ".txt";
                 if (File.Exists(target))
@@ -134,27 +131,13 @@ namespace HP2SpeedrunMod
             }
             else
             {
-                Datamining.Logger.LogMessage("invalid category");
+                //Logger.LogMessage("invalid category");
             }
-        }
-
-        //convert a timespan to the proper format string
-        public string convert(TimeSpan time)
-        {
-            string val = "";
-            if (time.Hours != 0)
-                val += time.ToString(@"h\:mm\:ss\.f");
-            else if (time.Minutes != 0)
-                val += time.ToString(@"m\:ss\.f");
-            else
-                val += time.ToString(@"s\.f");
-            return val;
         }
 
         public bool split()
         {
             splits.Add(runTimer.Elapsed);
-            //Datamining.Logger.LogMessage(runTimer.Elapsed.ToString());
             splitColor = SplitColors.WHITE; prevColor = SplitColors.WHITE; goldColor = SplitColors.WHITE;
             splitText = ""; prevText = ""; goldText = "";
 
@@ -235,7 +218,7 @@ namespace HP2SpeedrunMod
             }
 
             splitText = val;
-            //Datamining.Logger.LogMessage(splitText + " " + goldText);
+            //Logger.LogMessage(splitText + " " + goldText);
             return true;
         }
 
@@ -286,9 +269,8 @@ namespace HP2SpeedrunMod
                     }
                     File.WriteAllLines(target, spansToStrings(golds));
                 }
-                //Datamining.Logger.LogMessage("writing PB Attempt.txt");
+                //Logger.LogMessage("writing PB Attempt.txt");
                 File.WriteAllText("splits/" + category + " Last Attempt.txt", finalRunDisplay);
-                lastSavedSplitsPath = "splits/" + category + " Last Attempt.txt";
             }
             category = "";
             goal = -1;
@@ -323,7 +305,7 @@ namespace HP2SpeedrunMod
         public void push(string s)
         {
             finalRunDisplay += s;
-            //Datamining.Logger.LogMessage(finalRunDisplay);
+            //Logger.LogMessage(finalRunDisplay);
         }
 
         private string[] spansToStrings(List<TimeSpan> list)
