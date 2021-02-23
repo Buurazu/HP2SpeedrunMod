@@ -314,12 +314,6 @@ namespace HP2SpeedrunMod
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
             BasePatches.Update(); CheatPatches.Update(); InputPatches.Update(); RunTimerPatches.Update();
 
-            //Datamining.Logger.LogDebug("playerFile story progress: " + Game.Persistence.playerFile.storyProgress);
-            foreach (PlayerFileGirl g in Game.Persistence.playerFile.girls)
-            {
-                //Logger.LogDebug(g.girlDefinition.girlName);
-            }
-
             if (tooltip != null)
             {
                 if (tooltipTimer.ElapsedMilliseconds > tooltipLength)
@@ -347,11 +341,30 @@ namespace HP2SpeedrunMod
                 }
             }
 
-            //display the splits folder on Ctrl+S
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            {
+                //display the splits folder on Ctrl+S
+                if (Input.GetKeyDown(KeyCode.S))
+                {
+                    System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
+                }
+                //reset run on Ctrl+R
+                if (Input.GetKeyDown(KeyCode.R) && run != null)
+                {
+                    run.reset(true);
+                }
+                //quit run on Ctrl+Q
+                if (Input.GetKeyDown(KeyCode.Q) && run != null)
+                {
+                    run.reset(false);
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.S) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
             {
-                System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
+                
             }
+            
 
                 //if currently in a puzzle, and the status bar is up, and it's not nonstop mode, send data to autosplitters
                 if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive

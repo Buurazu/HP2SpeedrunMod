@@ -223,10 +223,10 @@ namespace HP2SpeedrunMod
         }
 
         //aka "save golds"
-        public void reset()
+        public void reset(bool saveGolds = true)
         {
             //save golds on reset of a category
-            if (category != "")
+            if (category != "" && saveGolds)
             {
                 string target = "splits/data/" + category + " Golds.txt";
                 if (File.Exists(target))
