@@ -413,7 +413,7 @@ namespace HP2SpeedrunMod
             //we now have the shuffled list of every order of girl pairs that could possibly exist. (line 17 of populatefinderslots, but smaller)
             //now just check through each like the game does
             //11 pairs = 39,916,800 permutations. This is too much
-            if (possiblePairs.Count >= 10)
+            if (possiblePairs.Count >= 9)
             {
                 Logger.LogMessage("Number of possible pairs is too large to permute! (" + possiblePairs.Count + ")");
                 return;

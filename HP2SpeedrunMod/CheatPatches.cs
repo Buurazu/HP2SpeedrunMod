@@ -24,6 +24,7 @@ namespace HP2SpeedrunMod
                 {
                     HP2SR.ShowNotif("Affection Filled!", 2);
                     Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
+                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, -1, false);
                     Game.Session.Puzzle.puzzleStatus.CheckChanges();
                 }
                 else

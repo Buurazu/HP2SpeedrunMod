@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.6";
+        public const string PluginVersion = "1.6.1";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -383,7 +383,8 @@ namespace HP2SpeedrunMod
                     startingRelationshipType = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Session.Location.currentGirlPair).relationshipType;
                     startingCompletedPairs = Game.Persistence.playerFile.completedGirlPairs.Count;
                 }
-                if (status.affectionMeter.currentValue == status.affectionMeter.maxValue)
+                if (status.affectionMeter.currentValue == status.affectionMeter.maxValue &&
+                    (Game.Session.gameCanvas.puzzleGrid.roundState == PuzzleRoundState.SUCCESS || isBonusRound))
                 {
                     if (!splitThisDate && run != null)
                     {
