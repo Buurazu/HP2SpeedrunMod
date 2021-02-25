@@ -57,7 +57,7 @@ namespace HP2SpeedrunMod
         public static void ForGarrett(UiDoll __instance, ref int hairstyleIndex, ref int ____currentHairstyleIndex, ref GirlDefinition ____girlDefinition, ref int __state)
         {
             if (____girlDefinition == null) return;
-            if (____girlDefinition.girlName == "Kyu")
+            if (____girlDefinition.girlName == "Kyu" && hairstyleIndex == -1)
             {
                 hairstyleIndex = HP2SR.KyuHairstyle;
             }
@@ -73,7 +73,7 @@ namespace HP2SpeedrunMod
             //set state to the intended outfit index, and change outfitIndex if lewd
             __state = outfitIndex;
             if (outfitIndex == -1) __state = Game.Persistence.playerFile.GetPlayerFileGirl(____girlDefinition).outfitIndex;
-            if (____girlDefinition.girlName == "Kyu")
+            if (____girlDefinition.girlName == "Kyu" && outfitIndex == -1)
             {
                 __state = HP2SR.KyuOutfit;
                 outfitIndex = HP2SR.KyuOutfit;
@@ -135,7 +135,6 @@ namespace HP2SpeedrunMod
         {
             if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
             {
-                //__result = Game.Session.Location.currentLocation.finderLocationIcon;
                 __result = Game.Session.Location.currentLocation.backgrounds[0];
                 return false;
             }

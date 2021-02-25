@@ -20,6 +20,8 @@ namespace HP2SpeedrunMod
 
         public static bool mashCheat = false;
 
+        public static bool codeScreen = false;
+
         public static void Update()
         {
             if (!HP2SR.InputModsEnabled.Value) return;
@@ -29,9 +31,10 @@ namespace HP2SpeedrunMod
 
         public static bool IsMouseKeyDown()
         {
-            if (mashCheat) return true;
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
-
+            if (codeScreen) return false;
+            if (mashCheat) return true;
+            
             horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
             if (Mathf.Abs(horiz) > DEADZONE && Mathf.Abs(prevHoriz) <= DEADZONE) return true;
             if (Mathf.Abs(vert) > DEADZONE && Mathf.Abs(prevVert) <= DEADZONE) return true;
@@ -51,8 +54,9 @@ namespace HP2SpeedrunMod
 
         public static bool IsMouseKeyUp()
         {
-            if (mashCheat) return true;
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
+            if (codeScreen) return false;
+            if (mashCheat) return true;
 
             horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
             if (Mathf.Abs(horiz) <= DEADZONE && Mathf.Abs(prevHoriz) > DEADZONE) return true;
@@ -73,9 +77,10 @@ namespace HP2SpeedrunMod
 
         public static bool IsMouseKey()
         {
-            if (mashCheat) return true;
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
-
+            if (codeScreen) return false;
+            if (mashCheat) return true;
+            
             horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
             if (Mathf.Abs(horiz) > DEADZONE) return true;
             if (Mathf.Abs(vert) > DEADZONE) return true;
@@ -115,5 +120,6 @@ namespace HP2SpeedrunMod
         {
             if (button == 0 && __result != true) __result = IsMouseKey();
         }
+
     }
 }

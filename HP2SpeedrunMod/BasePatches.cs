@@ -29,6 +29,19 @@ namespace HP2SpeedrunMod
 
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppCode), "Start")]
+        public static void DisableClicksOnCodeScreen()
+        {
+            InputPatches.codeScreen = true;
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppCode), "OnDestroy")]
+        public static void ReenableClicksOffCodeScreen()
+        {
+            InputPatches.codeScreen = false;
+        }
+
         //make pairs above the normal amount default to LOVERS
         [HarmonyPostfix]
         [HarmonyPatch(typeof(SaveFileGirlPair), "Reset")]

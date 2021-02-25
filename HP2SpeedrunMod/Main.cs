@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.5";
+        public const string PluginVersion = "1.6";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -148,6 +148,7 @@ namespace HP2SpeedrunMod
                 System.IO.Directory.CreateDirectory("splits");
                 System.IO.Directory.CreateDirectory("splits/data");
             }
+            RunTimer.ConvertOldSplits();
 
             //Check for a new update
             WebClient client = new WebClient();
@@ -346,30 +347,35 @@ namespace HP2SpeedrunMod
                 //display the splits folder on Ctrl+S
                 if (Input.GetKeyDown(KeyCode.S))
                 {
-                    System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
+                    if (Game.Manager.Ui.currentCanvas.titleCanvas)
+                        System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
+                    /*
+                    else if (run != null)
+                    {
+                        run.save();
+                        ShowNotif("Run saved!", 2);
+                    }*/
+                    //don't allow saving midrun, could be done accidentally
                 }
                 //reset run on Ctrl+R
                 if (Input.GetKeyDown(KeyCode.R) && run != null)
                 {
                     run.reset(true);
+                    ShowNotif("Run reset!", 2);
                 }
                 //quit run on Ctrl+Q
                 if (Input.GetKeyDown(KeyCode.Q) && run != null)
                 {
                     run.reset(false);
+                    ShowNotif("Run quit!", 2);
                 }
             }
-
-            if (Input.GetKeyDown(KeyCode.S) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-            {
-                
-            }
-            
 
                 //if currently in a puzzle, and the status bar is up, and it's not nonstop mode, send data to autosplitters
                 if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session && Game.Session.Puzzle.isPuzzleActive
                 && !Game.Session.gameCanvas.cellphone.isOpen && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP)
             {
+                //this is a possibly bold but necessary assumption to make about cellphone._currentApp
                 UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
                 bool isBonusRound = Game.Session.Puzzle.puzzleStatus.bonusRound;
                 if (status.affectionMeter.currentValue == 0)
@@ -385,100 +391,56 @@ namespace HP2SpeedrunMod
                         //always split for the two tutorial splits
                         if (Game.Session.Location.currentGirlPair.girlDefinitionOne.girlName == "Kyu")
                         {
-                            didSplit = run.split();
+                            didSplit = run.split(isBonusRound);
                         }
                         //don't split for dates in 48 Shoes, or in postgame
                         else if (run.goal != 48 && Game.Persistence.playerFile.storyProgress < 13)
                         {
-                            if (run.goal == 1 || SplitRules.Value <= 0) didSplit = run.split();
-                            else if (SplitRules.Value == 1 && !isBonusRound) didSplit = run.split();
-                            else if (SplitRules.Value == 2 && isBonusRound) didSplit = run.split();
+                            if (run.goal == 1 || SplitRules.Value <= 0) didSplit = run.split(isBonusRound);
+                            else if (SplitRules.Value == 1 && !isBonusRound) didSplit = run.split(isBonusRound);
+                            else if (SplitRules.Value == 2 && isBonusRound) didSplit = run.split(isBonusRound);
                             //check for final split regardless of option
                             else if (isBonusRound && (run.goal == startingCompletedPairs + 1 ||
                                         (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)))
-                                didSplit = run.split();
+                                didSplit = run.split(isBonusRound);
                         }
-                        //this delay is both so the affection meter doesn't change instantly, and so that the variables can change as they need to
                         if (didSplit)
                         {
-                            Task.Delay(1000).ContinueWith(t =>
+                            //initiate the timers for displaying and removing our split times
+                            RunTimerPatches.initialTimerDelay.Start();
+                            if (!isBonusRound) RunTimerPatches.undoTimer.Start();
+
+                            GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
+                            int dateNum = 1;
+                            if (startingRelationshipType == GirlPairRelationshipType.ATTRACTED) dateNum = 2;
+                            if (isBonusRound) dateNum = 3;
+                            //Kyu pair starts at ATTRACTED (2) and her bonus should be 2, not 3, so this is the easiest way
+                            if (pair.girlDefinitionOne.girlName == "Kyu") dateNum--;
+                            if (Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)
                             {
-                                status.affectionMeter.valueLabelPro.richText = true;
-                                status.affectionMeter.valueLabelPro.text =
-                                "<color=" + RunTimer.colors[(int)run.splitColor] + ">" + run.splitText + "</color>";
-                                
-                                Sequence seq = DOTween.Sequence();
-                                seq.Insert(0f, status.canvasGroupDate.DOFade(1, 0.32f).SetEase(Ease.Linear));
-                                seq.Insert(0f, status.canvasGroupLeft.DOFade(1, 0.32f).SetEase(Ease.Linear));
-                                seq.Insert(0f, status.canvasGroupRight.DOFade(1, 0.32f).SetEase(Ease.Linear));
-                                Game.Manager.Time.Play(seq, status.pauseBehavior.pauseDefinition, 0f);
+                                dateNum = 5 - (Game.Session.Puzzle.puzzleStatus.girlListCount / 2);
+                            }
+                            string newSplit = pair.girlDefinitionOne.girlName + " & " + pair.girlDefinitionTwo.girlName;
+                            //don't put a number on the date if they started as lovers, or it's nonstop mode? (for 100%)
+                            //the storyProgress check probably makes this pointless
+                            if (startingRelationshipType != GirlPairRelationshipType.LOVERS
+                            && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP) newSplit += " #" + dateNum;
+                            newSplit += "\n      " + run.splitText + "\n";
+                            run.push(newSplit);
 
-                                if (run.prevColor == RunTimer.SplitColors.BLUE)
+                            if (isBonusRound && pair.girlDefinitionOne.girlName != "Kyu")
+                            {
+                                //I think it's possible that, with a huge chain reaction, completedGirlPairs.Count might not have updated yet
+                                //so use the number from before the date, +1
+                                //funnily enough, that also makes the final boss's goal of "25" count
+                                //but I'll leave the double-check there
+                                if (run.goal == startingCompletedPairs + 1 ||
+                                (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS))
                                 {
-                                    status.sentimentRollerRight.valueName = "THIS SPLIT";
-                                    status.sentimentRollerRight.maxName = "THIS SPLIT";
-                                    status.sentimentRollerRight.nameLabel.text = "THIS SPLIT";
-                                    status.sentimentRollerRight.valueLabelPro.text = run.prevText;
+                                    Logger.LogMessage("initiating run.save");
+                                    run.save();
                                 }
-                                else if (run.prevColor == RunTimer.SplitColors.RED)
-                                {
-                                    status.passionRollerRight.valueName = "THIS SPLIT";
-                                    status.passionRollerRight.maxName = "THIS SPLIT";
-                                    status.passionRollerRight.nameLabel.text = "THIS SPLIT";
-                                    status.passionRollerRight.valueLabelPro.text = run.prevText;
-                                }
-
-                                if (run.goldText != "")
-                                {
-                                    status.movesRoller.valueName = "GOLD";
-                                    status.movesRoller.maxName = "GOLD";
-                                    status.movesRoller.nameLabel.text = "GOLD";
-                                    status.movesRoller.valueLabelPro.text = run.goldText;
-                                }
-                                //don't undo my changes if it's a bonus round, there's no stats to return to
-                                if (!isBonusRound)
-                                {
-                                    Task.Delay(5000).ContinueWith(t2 =>
-                                    {
-                                        status.sentimentRollerRight.valueName = "SENTIMENT"; status.sentimentRollerRight.maxName = "SENTI... • MAX";
-                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.sentimentRollerRight, null);
-                                        status.passionRollerRight.valueName = "PASSION"; status.passionRollerRight.maxName = "PASSION • MAX";
-                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.passionRollerRight, null);
-                                        status.movesRoller.valueName = "MOVES"; status.movesRoller.maxName = "MOVES • MAX";
-                                        AccessTools.Method(typeof(MeterRollerBehavior), "Refresh").Invoke(status.movesRoller, null);
-                                    });
-                                }
-
-                                GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
-                                int dateNum = 1;
-                                if (startingRelationshipType == GirlPairRelationshipType.ATTRACTED) dateNum = 2;
-                                if (isBonusRound) dateNum = 3;
-                                //Kyu pair starts at ATTRACTED (2) and her bonus should be 2, not 3, so this is the easiest way
-                                if (pair.girlDefinitionOne.girlName == "Kyu") dateNum--;
-                                if (Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)
-                                {
-                                    dateNum = 5 - (Game.Session.Puzzle.puzzleStatus.girlListCount / 2);
-                                }
-                                string newSplit = pair.girlDefinitionOne.girlName + " & " + pair.girlDefinitionTwo.girlName;
-                                //don't put a number on the date if they started as lovers, or it's nonstop mode? (for 100%)
-                                if (startingRelationshipType != GirlPairRelationshipType.LOVERS
-                                && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP) newSplit += " #" + dateNum;
-                                newSplit += "\n      " + run.splitText + "\n";
-                                run.push(newSplit);
-
-                                if (isBonusRound && pair.girlDefinitionOne.girlName != "Kyu")
-                                {
-                                    //I think it's possible that, with a huge chain reaction, completedGirlPairs.Count might not have updated yet
-                                    //so use the number from before the date, +1
-                                    //funnily enough, that also makes the final boss's goal of "25" count
-                                    //but I'll leave the double-check there
-                                    if (run.goal == startingCompletedPairs + 1 ||
-                                    (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS))
-                                    {
-                                        run.save();
-                                    }
-                                }
-                            });
+                            }
                         }
                     }
                     
@@ -511,7 +473,7 @@ namespace HP2SpeedrunMod
                     ShowTooltip("Update Available!\nClick on Credits!", 10000, 0, 45);
                 }
 
-                if (Input.GetKeyDown(KeyCode.A))
+                if (!InputPatches.codeScreen && Input.GetKeyDown(KeyCode.A))
                 {
                     CodeDefinition codeDefinition = Game.Data.Codes.Get(ABIAHAIR);
                     if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
@@ -548,7 +510,7 @@ namespace HP2SpeedrunMod
                 }
 
                 //check for the Cheat Mode hotkey
-                if (CheatHotkeyEnabled.Value && cheatsEnabled == false && !isLoading && Input.GetKeyDown(KeyCode.C))
+                if (!InputPatches.codeScreen && CheatHotkeyEnabled.Value && cheatsEnabled == false && !isLoading && Input.GetKeyDown(KeyCode.C))
                 {
                     Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxReject);
                     PlayCheatLine();
