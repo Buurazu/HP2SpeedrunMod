@@ -40,6 +40,7 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
         public static ConfigEntry<Boolean> InGameTimer { get; private set; }
         public static ConfigEntry<int> SplitRules { get; private set; }
+        public static ConfigEntry<Boolean> VsyncEnabled { get; private set; }
         public static ConfigEntry<Boolean> CapAt144 { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
@@ -76,10 +77,14 @@ namespace HP2SpeedrunMod
 
         private void Awake()
         {
+            VsyncEnabled = Config.Bind(
+                "Settings", nameof(VsyncEnabled),
+                false,
+                "Enable or disable Vsync. The FPS cap below will only take effect with it disabled");
             CapAt144 = Config.Bind(
                 "Settings", nameof(CapAt144),
                 true,
-                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster (especially on Hard)");
+                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster");
             InGameTimer = Config.Bind(
                 "Settings", nameof(InGameTimer),
                 true,
@@ -131,11 +136,14 @@ namespace HP2SpeedrunMod
             //I can't believe the game doesn't run in background by default
             Application.runInBackground = true;
             //allow max 144fps
-            QualitySettings.vSyncCount = 0;
-            if (CapAt144.Value)
-                Application.targetFrameRate = 144;
-            else
-                Application.targetFrameRate = 60;
+            if (!VsyncEnabled.Value)
+            {
+                QualitySettings.vSyncCount = 0;
+                if (CapAt144.Value)
+                    Application.targetFrameRate = 144;
+                else
+                    Application.targetFrameRate = 60;
+            }
 
             Harmony.CreateAndPatchAll(typeof(BasePatches), null);
             Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
