@@ -24,6 +24,7 @@ namespace HP2SpeedrunMod
 
         public static void Update()
         {
+            //for (KeyCode i = KeyCode.JoystickButton0; i <= KeyCode.JoystickButton19; i++) if (Input.GetKeyDown(i)) Datamining.Logger.LogMessage(i);
             if (!HP2SR.InputModsEnabled.Value) return;
             InputPatches.prevHoriz = InputPatches.horiz;
             InputPatches.prevVert = InputPatches.vert;

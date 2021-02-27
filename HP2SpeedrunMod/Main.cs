@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.6.1";
+        public const string PluginVersion = "1.6.2";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -79,7 +79,7 @@ namespace HP2SpeedrunMod
         {
             VsyncEnabled = Config.Bind(
                 "Settings", nameof(VsyncEnabled),
-                false,
+                true,
                 "Enable or disable Vsync. The FPS cap below will only take effect with it disabled");
             CapAt144 = Config.Bind(
                 "Settings", nameof(CapAt144),

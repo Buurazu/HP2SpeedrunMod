@@ -167,6 +167,29 @@ namespace HP2SpeedrunMod
                 }
             }
         }
+
+        public static string GetQuestionQuizlet(GirlDefinition g)
+        {
+            string questions = "";
+
+            List<DialogTriggerDefinition> lines = Game.Data.DialogTriggers.GetAll();
+            List<DialogLine> herQuestions = lines[51].dialogLineSets[g.id].dialogLines;
+            List<GirlQuestionSubDefinition> herAnswers = g.herQuestions;
+
+            for (int a = 0; a < herQuestions.Count; a++)
+            {
+                questions += PurifyDialogText(herQuestions[a].dialogText) + "\n   ";
+                foreach (GirlQuestionAnswerSubDefinition gqa in g.herQuestions[a].answers)
+                {
+                    if (gqa.responseIndex == -1)
+                    {
+                        questions += gqa.answerText + "\n";
+                    }
+                }
+            }
+
+            return questions;
+        }
         public static void GetGirlData()
         {
             Logger.LogDebug(Game.Persistence.playerFile.girls.Count + " girls");
@@ -195,8 +218,8 @@ namespace HP2SpeedrunMod
             foreach (GirlDefinition g in allBySpecial)
             {
                 data += g.girlName + ": Loves " + g.favoriteAffectionType + ", Hates " + g.leastFavoriteAffectionType + "\n";
-                data += g.uniqueType + " (" + g.uniqueAdj + "), " + g.shoesType + " (" + g.shoesAdj + ")\n\n";
-
+                data += g.uniqueType + " (" + g.uniqueAdj + "), " + g.shoesType + " (" + g.shoesAdj + ")\n";
+                data += GetQuestionQuizlet(g) + "\n";
             }
             foreach (GirlPairDefinition g in allBySpecial2)
             {
