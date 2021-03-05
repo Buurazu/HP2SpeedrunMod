@@ -14,16 +14,28 @@ namespace HP2SpeedrunMod
     {
         public static BepInEx.Logging.ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("Datamining");
 
-        public static void ExperimentalAllPairsMod()
+        public static void ExperimentalAllPairsMod(bool specialsToo = false)
         {
             Dictionary<int, GirlPairDefinition> allPairs = (Dictionary<int, GirlPairDefinition>)AccessTools.Field(typeof(GirlPairData), "_definitions").GetValue(Game.Data.GirlPairs);
-            foreach (GirlDefinition g in Game.Data.Girls.GetAll())
+            if (specialsToo)
             {
-                //g.specialCharacter = false;
+                foreach (GirlDefinition g in Game.Data.Girls.GetAll())
+                {
+                    g.specialCharacter = false;
+                    g.baggageItemDefs.Add(Game.Data.Ailments.Get(UnityEngine.Random.Range(1, 37)).itemDefinition);
+                    g.baggageItemDefs.Add(Game.Data.Ailments.Get(UnityEngine.Random.Range(1, 37)).itemDefinition);
+                    g.baggageItemDefs.Add(Game.Data.Ailments.Get(UnityEngine.Random.Range(1, 37)).itemDefinition);
+                    if (g.cellphoneHead == null) { g.cellphoneHead = g.cellphonePortrait; }
+                }
             }
             List<GirlPairDefinition> stockPairs = Game.Data.GirlPairs.GetAllBySpecial(false);
             int startingID = 27;
             int maxGirls = 12;
+            if (specialsToo)
+            {
+                startingID = 69;
+                maxGirls = 15;
+            }
             for (int i = 1; i <= maxGirls-1; i++)
             {
                 for (int j = i+1; j <= maxGirls; j++)
@@ -88,11 +100,11 @@ namespace HP2SpeedrunMod
             }
             
             GirlPairDefinition test = Game.Data.GirlPairs.GetAllBySpecial(false)[Game.Data.GirlPairs.GetAllBySpecial(false).Count - 1];
-            /*Logger.LogDebug("pair count: " + Game.Data.GirlPairs.GetAllBySpecial(false).Count);
+            Logger.LogDebug("pair count: " + Game.Data.GirlPairs.GetAllBySpecial(false).Count);
             foreach (GirlPairDefinition tester in Game.Data.GirlPairs.GetAllBySpecial(false))
             {
                 Logger.LogDebug(tester.girlDefinitionOne.girlName + " " + tester.girlDefinitionTwo.girlName + " " + tester.id);
-            }*/
+            }
         }
 
         public static void GetAllDialogTriggers()

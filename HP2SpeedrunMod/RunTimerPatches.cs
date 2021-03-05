@@ -54,22 +54,26 @@ namespace HP2SpeedrunMod
                 string newSplit = "100%\n      " + run.splitText + "\n";
                 run.push(newSplit);
                 run.save();
+                HP2SR.ShowThreeNotif("100% completed at " + run.splitText);
             }
             else if (run.goal == 48 && Game.Persistence.playerFile.GetStyleLevelExp() > shoesProgress)
             {
-                run.split();
                 shoesProgress = Game.Persistence.playerFile.GetStyleLevelExp();
-
-                justGaveShoe = true;
-                shoeTimer.Start();
-
-                string newSplit = "Shoe #" + shoesProgress + "\n      " + run.splitText + "\n";
-                run.push(newSplit);
-                if (shoesProgress == 48)
+                //split every style level
+                if (shoesProgress % 6 == 0)
                 {
-                    run.save();
-                    //let you bask in the glory
-                    shoeTimer.Reset();
+                    run.split();
+                    justGaveShoe = true;
+                    shoeTimer.Start();
+
+                    string newSplit = "Shoe #" + shoesProgress + "\n      " + run.splitText + "\n";
+                    run.push(newSplit);
+                    if (shoesProgress == 48)
+                    {
+                        run.save();
+                        //let you bask in the glory
+                        shoeTimer.Reset();
+                    }
                 }
             }
         }

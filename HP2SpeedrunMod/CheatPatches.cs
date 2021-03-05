@@ -229,7 +229,7 @@ namespace HP2SpeedrunMod
             Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.ROMANCE, 5);
             Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.SEXUALITY, 5);
             Game.Persistence.playerFile.AddFruitCount(PuzzleAffectionType.TALENT, 5);
-            //ashley is added first
+            //ashley is added first, not that it matters probably
             Game.Persistence.playerFile.GetPlayerFileGirl(Game.Data.Girls.Get(10));
             for (int i = 1; i <= 12; i++)
             {
@@ -246,6 +246,14 @@ namespace HP2SpeedrunMod
             //use test mode to instantly appear in hub
             AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, true);
             Game.Persistence.SaveGame();
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCellphoneAppReconfig), "Start")]
+        public static void AllowAnyDifficultyChange(UiCellphoneAppReconfig __instance, ref int ____difficultyShave)
+        {
+            ____difficultyShave = 0;
+            __instance.Refresh();
         }
 
         [HarmonyPrefix]
@@ -290,6 +298,48 @@ namespace HP2SpeedrunMod
             Datamining.TestAllPermutations();
         }
 
+        /*
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiPuzzleGrid), "CreateToken")]
+        public static void Testing(UiPuzzleGrid __instance, ref int col)
+        {
+            Datamining.Logger.LogDebug("done with createtoken");
+            UiPuzzleSlot lowest = (UiPuzzleSlot)AccessTools.Method(typeof(UiPuzzleGrid), "GetLowestEmptySlot").Invoke(__instance, new object[] { col });
+            if (lowest != null)
+                Datamining.Logger.LogDebug("col = " + col + ", lowest empty slot = " + lowest.row);
+        }*/
+
+        /*
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiPuzzleGrid), "StartPuzzle")]
+        public static void CheatPuzzle(UiPuzzleGrid __instance)
+        {
+            string[] array = "1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,4,3,3|1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,4,3,4,4|2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,4,2,3|1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4|2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3|2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3|1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4|2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3|2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4,1,2,3".Split(new char[]
+        {
+            '|'
+        });
+            for (int i = 0; i < array.Length; i++)
+            {
+                __instance.preloadedTokens.Add(new List<TokenDefinition>());
+                string[] array2 = array[i].Split(new char[]
+                {
+                ','
+                });
+                for (int j = 0; j < array2.Length; j++)
+                {
+                    int num = StringUtils.ParseIntValue(array2[j]);
+                    if (num > 0)
+                    {
+                        __instance.preloadedTokens[i].Add(Game.Data.Tokens.Get(num));
+                    }
+                    else
+                    {
+                        __instance.preloadedTokens[i].Add(null);
+                    }
+                }
+            }
+        }
+        */
         //item cheats and tutorial skip and more coming soon
         /*
         public static void AddItem(string theItem, InventoryItemPlayerData[] target = null)
@@ -318,34 +368,6 @@ namespace HP2SpeedrunMod
             GameUtil.ShowNotification(CellNotificationType.MESSAGE, "Fantastic date gifts added to inventory");
         }
 
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(GirlPlayerData), "ReadGirlSaveData")]
-        public static void MakeUsMet(GirlPlayerData __instance)
-        {
-            if (__instance.metStatus < GirlMetStatus.UNKNOWN) __instance.metStatus = GirlMetStatus.UNKNOWN;
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(GameManager), "SaveGame")]
-        public static bool SaveDisabler() {
-            if (BaseHunieModPlugin.savingDisabled) return false;
-            else return true;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(LocationManager), "OnLocationSettled")]
-        public static void SkipTutorialOnArrival()
-        {
-            if (GameManager.System.Player.tutorialStep < 2)
-            {
-                GameManager.System.Player.tutorialStep = 2;
-                GameManager.System.Player.money = 1000;
-                CheatPatches.AddItem("Stuffed Bear",GameManager.System.Player.dateGifts);
-                AddGreatGiftsToInventory();
-
-            }
-        }
         */
     }
 }

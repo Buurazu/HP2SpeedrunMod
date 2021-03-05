@@ -31,6 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AllPairsPatches.cs" />
     <Compile Include="BasePatches.cs" />
     <Compile Include="CensorshipPatches.cs" />
     <Compile Include="CheatPatches.cs" />

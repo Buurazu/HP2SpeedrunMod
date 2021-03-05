@@ -24,9 +24,57 @@ namespace HP2SpeedrunMod
             searchForMe = 123456789;
         }
 
+        static string temp = "";
         public static void Update()
         {
-
+            /*if (Game.Session && Game.Session.Puzzle.puzzleStatus.tokenStatus[5].GetCurrentWeight() < 30)
+            {
+                Game.Session.Puzzle.puzzleStatus.tokenStatus[5].AdjustCurrentWeight(1);
+                Datamining.Logger.LogDebug(Game.Session.Puzzle.puzzleStatus.tokenStatus[5].GetCurrentWeight());
+            }*/
+            /*
+            if (Game.Session)
+            {
+                foreach (PuzzleStatusToken pst in Game.Session.Puzzle.puzzleStatus.tokenStatus)
+                {
+                    //Datamining.Logger.LogDebug(pst.tokenDefinition.tokenName + ": " + pst.GetCurrentWeight());
+                }
+                PuzzleSet set = Game.Session.Puzzle.puzzleGrid.moveMatchSet;
+                if (set != null)
+                {
+                    string newmatch = "";
+                    List<UiPuzzleSlot> list = null;
+                    List<UiPuzzleSlot> list2 = new List<UiPuzzleSlot>();
+                    foreach (PuzzleMatch match in set.matches)
+                    {
+                        list = (from slot in ListUtils.CopyList<UiPuzzleSlot>(match.slots)
+                                                   orderby slot.row + slot.col, UnityEngine.Random.Range(0f, 1f)
+                                                   select slot).ToList<UiPuzzleSlot>();
+                        while (list.Count > 0)
+                        {
+                            float f = (float)(list.Count - 1) * 0.5f;
+                            int index = Mathf.Clamp(MathUtils.RandomBool() ? Mathf.FloorToInt(f) : Mathf.CeilToInt(f), 0, list.Count - 1);
+                            list2.Add(list[index]);
+                            list.RemoveAt(index);
+                        }
+                        foreach (UiPuzzleSlot slot in match.slots)
+                        {
+                            newmatch += slot.row + "," + slot.col + "; ";
+                        }
+                    }
+                    if (newmatch != temp)
+                    {
+                        temp = newmatch;
+                        Datamining.Logger.LogDebug(newmatch);
+                        newmatch = "";
+                        foreach (UiPuzzleSlot slot in list2)
+                        {
+                            newmatch += slot.row + "," + slot.col + "; ";
+                        }
+                        Datamining.Logger.LogDebug(newmatch);
+                    }
+                }
+            }*/
         }
 
         [HarmonyPrefix]
@@ -42,20 +90,44 @@ namespace HP2SpeedrunMod
             InputPatches.codeScreen = false;
         }
 
-        //make pairs above the normal amount default to LOVERS
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(SaveFileGirlPair), "Reset")]
-        public static void EveryoneBeLovin(SaveFileGirlPair __instance, ref int id)
-        {
-            if (HP2SR.AllPairsEnabled.Value && id >= 27) __instance.relationshipLevel = (int)GirlPairRelationshipType.LOVERS;
-        }
-
-        //FOR PAIRS CHEAT ONLY
+        //add the all pairs code, and also remove it from the save if needed
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PlayerFile), "ReadData")]
         public static void AddExtraPairs(PlayerFile __instance, ref SaveFile saveFile)
         {
-            if (HP2SR.AllPairsEnabled.Value && Game.Data.GirlPairs.GetAll().Count < 40) Datamining.ExperimentalAllPairsMod();
+            if (HP2SR.AllPairsEnabled.Value && Game.Data.GirlPairs.GetAll().Count < 27)
+            {
+                Datamining.ExperimentalAllPairsMod(false);
+                if (HP2SR.SpecialPairsEnabled.Value) Datamining.ExperimentalAllPairsMod(true);
+            }
+            if ((!HP2SR.AllPairsEnabled.Value && saveFile.girlPairs.Count >= 27) || (!HP2SR.SpecialPairsEnabled.Value && saveFile.girlPairs.Count >= 69))
+            {
+                //fix an allpairs save file before it gets read
+                if (Game.Data.GirlPairs.Get(saveFile.girlPairId) == null)
+                {
+                    saveFile.girlPairId = UnityEngine.Random.Range(1, 25);
+                }
+                for (int i = saveFile.girlPairs.Count - 1; i >= 0; i--)
+                {
+                    if (Game.Data.GirlPairs.Get(saveFile.girlPairs[i].girlPairId) == null)
+                        saveFile.girlPairs.RemoveAt(i);
+                }
+                for (int i = saveFile.metGirlPairs.Count - 1; i >= 0; i--)
+                {
+                    if (Game.Data.GirlPairs.Get(saveFile.metGirlPairs[i]) == null)
+                        saveFile.metGirlPairs.RemoveAt(i);
+                }
+                for (int i = saveFile.completedGirlPairs.Count - 1; i >= 0; i--)
+                {
+                    if (Game.Data.GirlPairs.Get(saveFile.completedGirlPairs[i]) == null)
+                        saveFile.completedGirlPairs.RemoveAt(i);
+                }
+                for (int i = saveFile.finderSlots.Count - 1; i >= 0; i--)
+                {
+                    if (Game.Data.GirlPairs.Get(saveFile.finderSlots[i].girlPairId) == null)
+                        saveFile.finderSlots[i].girlPairId = 0;
+                }
+            }
         }
 
         //allow the disabled toggles (quick transitions, Abia's hair) to be added to the code list

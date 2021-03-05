@@ -34,6 +34,7 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<Boolean> ReturnToMenuEnabled { get; private set; }
         public static ConfigEntry<Boolean> CheatHotkeyEnabled { get; private set; }
         public static ConfigEntry<Boolean> AllPairsEnabled { get; private set; }
+        public static ConfigEntry<Boolean> SpecialPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> MouseWheelEnabled { get; private set; }
         public static ConfigEntry<Boolean> KeyboardEnabled { get; private set; }
         public static ConfigEntry<Boolean> InputModsEnabled { get; private set; }
@@ -128,7 +129,11 @@ namespace HP2SpeedrunMod
             AllPairsEnabled = Config.Bind(
                 "Settings", nameof(AllPairsEnabled),
                 false,
-                "Enable or disable all 66 pairs showing up (any save files used with this active will need to be erased if you go back to 24-pair mode)");
+                "Enable or disable all 66 pairs showing up");
+            SpecialPairsEnabled = Config.Bind(
+                "Settings", nameof(SpecialPairsEnabled),
+                false,
+                "Include Kyu/Moxie/Jewn pairs");
         }
 
         void Start()
@@ -144,11 +149,6 @@ namespace HP2SpeedrunMod
                 else
                     Application.targetFrameRate = 60;
             }
-
-            Harmony.CreateAndPatchAll(typeof(BasePatches), null);
-            Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
-            //initiate the variable used for autosplitting
-            BasePatches.InitSearchForMe();
 
             //Create the splits files for the first time if they don't exist
             if (!System.IO.Directory.Exists("splits"))
@@ -169,14 +169,12 @@ namespace HP2SpeedrunMod
             }
             catch (Exception e) { Logger.LogMessage("Couldn't read the update pastebin! " + e.ToString()); }
 
-            if (InputModsEnabled.Value)
-            {
-                Harmony.CreateAndPatchAll(typeof(InputPatches), null);
-            }
-            if (InGameTimer.Value)
-            {
-                Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
-            }
+            //initiate the variable used for autosplitting
+            Harmony.CreateAndPatchAll(typeof(BasePatches), null); BasePatches.InitSearchForMe();
+            Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
+            if (InputModsEnabled.Value) Harmony.CreateAndPatchAll(typeof(InputPatches), null);
+            if (InGameTimer.Value) Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
+            if (AllPairsEnabled.Value) Harmony.CreateAndPatchAll(typeof(AllPairsPatches), null);
 
         }
 
@@ -185,6 +183,7 @@ namespace HP2SpeedrunMod
             switch (Game.Manager.buildVersion)
             {
                 //eventually, a version update will break something
+                //and i will be wholly unprepared
                 case ("1.0.0"):
                 case ("1.0.1"):
                 case ("1.0.2"):
