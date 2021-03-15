@@ -237,7 +237,7 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(UiAppFileIconSlot), "ShowTooltip")]
         public static bool CategoryNameDisplay(UiAppFileIconSlot __instance, ref UiTooltipSimple ____tooltip)
         {
-            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value) return true;
+            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value || !Game.Manager.Ui.currentCanvas.titleCanvas) return true;
             int cat = __instance.girlDefinition.id - 1;
             int diff = HP2SR.lastChosenDifficulty;
             if (cat < RunTimer.categories.Length)
