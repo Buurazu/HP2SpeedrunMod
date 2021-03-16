@@ -330,6 +330,12 @@ namespace HP2SpeedrunMod
                     else goldDates.Add(s);
                 }
             }
+            else //category == ""
+            {
+                //reset the timer for each split if we aren't in a category
+                runTimer.Reset();
+                runTimer.Start();
+            }
 
             splitText = val;
             //Logger.LogMessage(splitText + " " + goldText);
@@ -429,6 +435,7 @@ namespace HP2SpeedrunMod
             }
             category = "";
             goal = -1;
+            runTimer.Reset(); runTimer.Start();
         }
 
         //a run has finished; is it faster than our comparison?
