@@ -188,22 +188,60 @@ namespace HP2SpeedrunMod
             List<DialogLine> herQuestions = lines[51].dialogLineSets[g.id].dialogLines;
             List<GirlQuestionSubDefinition> herAnswers = g.herQuestions;
 
+            List<string> QandAs = new List<string>();
             for (int a = 0; a < herQuestions.Count; a++)
             {
-                questions += PurifyDialogText(herQuestions[a].dialogText) + "\n   ";
+                string tempq = PurifyDialogText(herQuestions[a].dialogText) + "\n    ";
                 foreach (GirlQuestionAnswerSubDefinition gqa in g.herQuestions[a].answers)
                 {
                     if (gqa.responseIndex == -1)
                     {
-                        questions += gqa.answerText + "\n";
+                        tempq += gqa.answerText;
                     }
                 }
+                QandAs.Add(tempq);
+            }
+
+            QandAs.Sort((x,y) => x.CompareTo(y));
+            foreach (string s in QandAs)
+            {
+                questions += s + "\n";
             }
 
             return questions;
         }
+
         public static void GetGirlData()
         {
+            //couldn't find a quick way to get these strings so i got them manually
+            Dictionary<string, string> convertPairQuestions = new Dictionary<string, string>();
+            convertPairQuestions.Add("Movie Genre", "movie genre");
+            convertPairQuestions.Add("Phone App", "app on your phone");
+            convertPairQuestions.Add("Theme Park Ride", "theme park ride");
+            convertPairQuestions.Add("Holiday", "holiday");
+            convertPairQuestions.Add("Outdoor Activity", "outdoor activity");
+            convertPairQuestions.Add("Sunday Morning", "Sunday morning");
+            convertPairQuestions.Add("Place to Shop", "place to go shopping");
+            convertPairQuestions.Add("Trait in Partner", "trait to have in a partner");
+            convertPairQuestions.Add("Own Body Part", "part about your own body");
+            convertPairQuestions.Add("Porn Category", "category of porn");
+            convertPairQuestions.Add("Ice Cream Flavor", "flavor of ice cream");
+            convertPairQuestions.Add("Friday Night", "Friday night");
+            convertPairQuestions.Add("Weather", "kind of weather");
+            convertPairQuestions.Add("Pet", "type of pet");
+            convertPairQuestions.Add("School Subject", "subject in high school");
+            convertPairQuestions.Add("Drink", "thing to drink");
+            convertPairQuestions.Add("Music Genre", "music genre");
+            convertPairQuestions.Add("Online Activity", "thing to do online");
+            convertPairQuestions.Add("Type of Exercise", "way to exercise");
+            convertPairQuestions.Add("Sex Position", "sex position");
+
+            Dictionary<int, string> girlIDToHotkey = new Dictionary<int, string>();
+            for (int i = 1; i <= 9; i++) girlIDToHotkey.Add(i, i.ToString());
+            girlIDToHotkey.Add(10, "0");
+            girlIDToHotkey.Add(11, "-");
+            girlIDToHotkey.Add(12, "=");
+
             Logger.LogDebug(Game.Persistence.playerFile.girls.Count + " girls");
 
             List<GirlDefinition> allBySpecial = Game.Data.Girls.GetAllBySpecial(false);
@@ -226,13 +264,27 @@ namespace HP2SpeedrunMod
             }
 
             string data = "";
-            Logger.LogDebug("test");
+
+            //output unordered girl info list
             foreach (GirlDefinition g in allBySpecial)
             {
-                data += g.girlName + ": Loves " + g.favoriteAffectionType + ", Hates " + g.leastFavoriteAffectionType + "\n";
+                data += g.girlName + " (" + girlIDToHotkey[g.id] + "): Loves " + g.favoriteAffectionType + ", Hates " + g.leastFavoriteAffectionType + "\n";
                 data += g.uniqueType + " (" + g.uniqueAdj + "), " + g.shoesType + " (" + g.shoesAdj + ")\n";
                 data += GetQuestionQuizlet(g) + "\n";
             }
+            data += "\n";
+
+            allBySpecial.Sort((x, y) => x.girlName.CompareTo(y.girlName));
+
+            //output alphabetical girl info list
+            foreach (GirlDefinition g in allBySpecial)
+            {
+                data += g.girlName + " (" + girlIDToHotkey[g.id] + "): Loves " + g.favoriteAffectionType + ", Hates " + g.leastFavoriteAffectionType + "\n";
+                data += g.uniqueType + " (" + g.uniqueAdj + "), " + g.shoesType + " (" + g.shoesAdj + ")\n";
+                data += GetQuestionQuizlet(g) + "\n";
+            }
+
+            //output unordered pair info list
             foreach (GirlPairDefinition g in allBySpecial2)
             {
                 GirlDefinition g1 = g.girlDefinitionOne; GirlDefinition g2 = g.girlDefinitionTwo;
@@ -241,10 +293,61 @@ namespace HP2SpeedrunMod
                 if (g.introductionPair) data += "Introduction Pair: YES, ";
                 data += "Meeting Location: " + g.meetingLocationDefinition.locationName + ", Sex Day Phase: " + g.sexDaytime + "\n";
                 data += "Favorite Questions: ";
-                foreach (GirlPairFavQuestionSubDefinition q in g.favQuestions)
+                List<GirlPairFavQuestionSubDefinition> qs = g.favQuestions;
+
+                foreach (GirlPairFavQuestionSubDefinition q in qs) {
+                    if (convertPairQuestions.ContainsKey(q.questionDefinition.questionName)) q.questionDefinition.questionName = convertPairQuestions[q.questionDefinition.questionName];
+                }
+                qs.Sort((x, y) => x.questionDefinition.questionName.CompareTo(y.questionDefinition.questionName));
+                foreach (GirlPairFavQuestionSubDefinition q in qs)
                 {
                     data += q.questionDefinition.questionName + ", ";
                 }
+                data = data.Substring(0, data.Length - 2);
+                data += "\n\n";
+            }
+            data += "\n";
+            foreach (GirlPairDefinition g in allBySpecial2)
+            {
+                //swap pairs so earlier name is always girldefinitionone
+                if (g.girlDefinitionOne.girlName.CompareTo(g.girlDefinitionTwo.girlName) > 0)
+                {
+                    GirlDefinition temp = g.girlDefinitionOne;
+                    g.girlDefinitionOne = g.girlDefinitionTwo;
+                    g.girlDefinitionTwo = temp;
+                }
+            }
+
+            allBySpecial2.Sort((x, y) => {
+                int result = x.girlDefinitionOne.girlName.CompareTo(y.girlDefinitionOne.girlName);
+                if (result == 0)
+                {
+                    result = x.girlDefinitionTwo.girlName.CompareTo(y.girlDefinitionTwo.girlName);
+                }
+                return result; }
+            );
+            //allBySpecial2.Sort((x, y) => { if (x.girlDefinitionOne.girlName == y.girlDefinitionOne.girlName) return x.girlDefinitionTwo.girlName.CompareTo(y.girlDefinitionTwo.girlName); else return 0; });
+            
+            foreach (GirlPairDefinition g in allBySpecial2)
+            {
+                GirlDefinition g1 = g.girlDefinitionOne; GirlDefinition g2 = g.girlDefinitionTwo;
+                data += g1.girlName + " + " + g2.girlName + "; " + g2.girlName + " + " + g1.girlName +
+                    " (" + g1.favoriteAffectionType + ", " + g2.favoriteAffectionType + ")\n";
+                if (g.introductionPair) data += "Introduction Pair: YES, ";
+                data += "Meeting Location: " + g.meetingLocationDefinition.locationName + ", Sex Day Phase: " + g.sexDaytime + "\n";
+                data += "Favorite Questions: ";
+                List<GirlPairFavQuestionSubDefinition> qs = g.favQuestions;
+
+                foreach (GirlPairFavQuestionSubDefinition q in qs)
+                {
+                    if (convertPairQuestions.ContainsKey(q.questionDefinition.questionName)) q.questionDefinition.questionName = convertPairQuestions[q.questionDefinition.questionName];
+                }
+                qs.Sort((x, y) => x.questionDefinition.questionName.CompareTo(y.questionDefinition.questionName));
+                foreach (GirlPairFavQuestionSubDefinition q in qs)
+                {
+                    data += q.questionDefinition.questionName + ", ";
+                }
+                data = data.Substring(0, data.Length - 2);
                 data += "\n\n";
             }
             Logger.LogDebug(data);
@@ -267,7 +370,7 @@ namespace HP2SpeedrunMod
             }
 
 
-            Logger.LogDebug(huge);
+            //Logger.LogDebug(huge);
 
             float num = (float)Mathf.Clamp(Game.Persistence.playerFile.storyProgress - 2, 0, 12) * 0.5f;
             Logger.LogDebug(num);
