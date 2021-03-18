@@ -10,13 +10,15 @@ namespace HP2SpeedrunMod
 {
     public class InputPatches
     {
-        public static KeyCode[] mouseControllerButtons = new KeyCode[] { KeyCode.JoystickButton0, KeyCode.JoystickButton1, KeyCode.JoystickButton2, KeyCode.JoystickButton3 };
-        public static KeyCode[] mouseKeyboardKeys = new KeyCode[] {KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.Q, KeyCode.E,
-            KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow};
+        public static List<KeyCode> mouseControllerButtons = new List<KeyCode>();
+        //public static KeyCode[] mouseControllerButtons = new KeyCode[] { KeyCode.JoystickButton0, KeyCode.JoystickButton1, KeyCode.JoystickButton2, KeyCode.JoystickButton3 };
+        public static List<KeyCode> mouseKeyboardKeys = new List<KeyCode>();
+        //public static KeyCode[] mouseKeyboardKeys = new KeyCode[] {KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.Q, KeyCode.E,
+        //    KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow};
 
         public static float horiz, vert, prevHoriz, prevVert;
 
-        public const float DEADZONE = 0.25f;
+        public const float DEADZONE = 0.5f;
 
         public static bool mashCheat = false;
 
@@ -26,8 +28,10 @@ namespace HP2SpeedrunMod
         {
             //for (KeyCode i = KeyCode.JoystickButton0; i <= KeyCode.JoystickButton19; i++) if (Input.GetKeyDown(i)) Datamining.Logger.LogMessage(i);
             if (!HP2SR.InputModsEnabled.Value) return;
-            InputPatches.prevHoriz = InputPatches.horiz;
-            InputPatches.prevVert = InputPatches.vert;
+            prevHoriz = horiz;
+            prevVert = vert;
+            horiz = Input.GetAxisRaw("Horizontal");
+            vert = Input.GetAxisRaw("Vertical");
         }
 
         public static bool IsMouseKeyDown()
@@ -35,18 +39,16 @@ namespace HP2SpeedrunMod
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
             if (mashCheat) return true;
-            
-            horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
-            if (Mathf.Abs(horiz) > DEADZONE && Mathf.Abs(prevHoriz) <= DEADZONE) return true;
-            if (Mathf.Abs(vert) > DEADZONE && Mathf.Abs(prevVert) <= DEADZONE) return true;
-            if (HP2SR.KeyboardEnabled.Value)
+            if (HP2SR.HorizVertEnabled.Value)
             {
-                for (int i = 0; i < mouseKeyboardKeys.Length; i++)
-                {
-                    if (Input.GetKeyDown(mouseKeyboardKeys[i])) return true;
-                }
+                if (Mathf.Abs(horiz) > DEADZONE && Mathf.Abs(prevHoriz) <= DEADZONE) return true;
+                if (Mathf.Abs(vert) > DEADZONE && Mathf.Abs(prevVert) <= DEADZONE) return true;
             }
-            for (int i = 0; i < mouseControllerButtons.Length; i++)
+            for (int i = 0; i < mouseKeyboardKeys.Count; i++)
+            {
+                if (Input.GetKeyDown(mouseKeyboardKeys[i])) return true;
+            }
+            for (int i = 0; i < mouseControllerButtons.Count; i++)
             {
                 if (Input.GetKeyDown(mouseControllerButtons[i])) return true;
             }
@@ -58,18 +60,16 @@ namespace HP2SpeedrunMod
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
             if (mashCheat) return true;
-
-            horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
-            if (Mathf.Abs(horiz) <= DEADZONE && Mathf.Abs(prevHoriz) > DEADZONE) return true;
-            if (Mathf.Abs(vert) <= DEADZONE && Mathf.Abs(prevVert) > DEADZONE) return true;
-            if (HP2SR.KeyboardEnabled.Value)
+            if (HP2SR.HorizVertEnabled.Value)
             {
-                for (int i = 0; i < mouseKeyboardKeys.Length; i++)
-                {
-                    if (Input.GetKeyUp(mouseKeyboardKeys[i])) return true;
-                }
+                if (Mathf.Abs(horiz) <= DEADZONE && Mathf.Abs(prevHoriz) > DEADZONE) return true;
+                if (Mathf.Abs(vert) <= DEADZONE && Mathf.Abs(prevVert) > DEADZONE) return true;
             }
-            for (int i = 0; i < mouseControllerButtons.Length; i++)
+            for (int i = 0; i < mouseKeyboardKeys.Count; i++)
+            {
+                if (Input.GetKeyUp(mouseKeyboardKeys[i])) return true;
+            }
+            for (int i = 0; i < mouseControllerButtons.Count; i++)
             {
                 if (Input.GetKeyUp(mouseControllerButtons[i])) return true;
             }
@@ -81,18 +81,16 @@ namespace HP2SpeedrunMod
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
             if (mashCheat) return true;
-            
-            horiz = Input.GetAxis("Horizontal"); vert = Input.GetAxis("Vertical");
-            if (Mathf.Abs(horiz) > DEADZONE) return true;
-            if (Mathf.Abs(vert) > DEADZONE) return true;
-            if (HP2SR.KeyboardEnabled.Value)
+            if (HP2SR.HorizVertEnabled.Value)
             {
-                for (int i = 0; i < mouseKeyboardKeys.Length; i++)
-                {
-                    if (Input.GetKey(mouseKeyboardKeys[i])) return true;
-                }
+                if (Mathf.Abs(horiz) > DEADZONE) return true;
+                if (Mathf.Abs(vert) > DEADZONE) return true;
             }
-            for (int i = 0; i < mouseControllerButtons.Length; i++)
+            for (int i = 0; i < mouseKeyboardKeys.Count; i++)
+            {
+                if (Input.GetKey(mouseKeyboardKeys[i])) return true;
+            }
+            for (int i = 0; i < mouseControllerButtons.Count; i++)
             {
                 if (Input.GetKey(mouseControllerButtons[i])) return true;
             }
