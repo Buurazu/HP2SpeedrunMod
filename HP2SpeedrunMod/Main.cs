@@ -187,8 +187,9 @@ namespace HP2SpeedrunMod
             if (InGameTimer.Value) Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
             if (AllPairsEnabled.Value) Harmony.CreateAndPatchAll(typeof(AllPairsPatches), null);
 
-            string[] keys = MouseKeys.Value.Split(',');
-            string validKeycodes = "Mouse button bound to keys: ";
+            string both = MouseKeys.Value + "," + ControllerKeys.Value;
+            string[] keys = both.Split(',');
+            string validKeycodes = "Mouse button bound to keys/buttons: ";
             for (int i = 0; i < keys.Length; i++)
             {
                 keys[i] = keys[i].Trim();
