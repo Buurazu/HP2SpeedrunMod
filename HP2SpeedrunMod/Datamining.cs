@@ -7,6 +7,7 @@ using HarmonyLib;
 using BepInEx.Configuration;
 using System.Collections.Generic;
 using System.Net;
+using System.Collections;
 
 namespace HP2SpeedrunMod
 {

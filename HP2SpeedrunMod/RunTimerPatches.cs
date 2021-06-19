@@ -78,6 +78,32 @@ namespace HP2SpeedrunMod
             }
         }
 
+        //Lillian cheat code, we voted no tho
+        /*
+        public static int rerolls = 0;
+
+        //putting this here since it is gonna check if a 1 Wing run is active
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlayerFile), "PopulateFinderSlots")]
+        public static void LillianCheat(PlayerFile __instance)
+        {
+            if (HP2SR.RerollForLillian.Value == false || HP2SR.run == null || HP2SR.run.goal != 1 || __instance.daytimeElapsed != 8)
+            {
+                return;
+            }
+
+            PlayerFileFinderSlot theAirport = __instance.GetPlayerFileFinderSlot(Game.Data.Locations.Get(6));
+            if (theAirport.girlPairDefinition == null || theAirport.girlPairDefinition.id != 5)
+            {
+                rerolls++;
+                HP2SR.run.rerollOccurred = true;
+                Datamining.Logger.LogMessage("Rerolling the Girl Finder slots! Attempt #" + rerolls);
+                __instance.PopulateFinderSlots(); //this will recursively end up calling this same postfix until the pair is there
+            }
+            rerolls = 0;
+        }
+        */
+
         //just in case, especially for the dumb 48 shoes timer, don't start timers on a different status and finish them on the new one
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiCellphoneAppStatus), "OnDestroy")]

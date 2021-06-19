@@ -41,6 +41,7 @@ namespace HP2SpeedrunMod
         public SplitColors splitColor;
         public SplitColors prevColor;
         public SplitColors goldColor;
+        public bool rerollOccurred;
 
         public string finalRunDisplay = "";
 
@@ -185,6 +186,7 @@ namespace HP2SpeedrunMod
             category = "";
             goal = -1;
             runTimer = DateTime.UtcNow.Ticks;
+            rerollOccurred = false;
         }
         public RunTimer(int newFile, int cat, int difficulty) : this()
         {

@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.8.1";
+        public const string PluginVersion = "1.9";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -44,6 +44,7 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<int> SplitRules { get; private set; }
         public static ConfigEntry<Boolean> VsyncEnabled { get; private set; }
         public static ConfigEntry<Boolean> CapAt144 { get; private set; }
+        //public static ConfigEntry<Boolean> RerollForLillian { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
         public static bool unloadingByHotkey = false;
@@ -123,6 +124,10 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(InGameTimer),
                 true,
                 "Enable or disable the built-in timer (shows your time on the affection meter after each date, read the readme for more info)");
+            /*RerollForLillian = Config.Bind(
+                "Settings", nameof(RerollForLillian),
+                true,
+                "Force Lillian+Ashley to appear on Afternoon 1 in 1 Wing runs (Requires the in-game timer, so it knows you're doing 1 Wing)");*/
             SplitRules = Config.Bind(
                 "Settings", nameof(SplitRules),
                 0,
@@ -476,6 +481,10 @@ namespace HP2SpeedrunMod
                                 (run.goal == 25 && Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS))
                                 {
                                     Logger.LogMessage("initiating run.save");
+                                    if (run.rerollOccurred)
+                                    {
+                                        run.push("\n(Rerolled for Lillian)\n");
+                                    }
                                     run.save();
                                 }
                             }

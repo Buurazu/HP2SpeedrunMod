@@ -23,7 +23,7 @@ namespace HP2SpeedrunMod
                 if (Game.Session.Location.currentLocation.locationType == LocationType.DATE)
                 {
                     HP2SR.ShowNotif("Affection Filled!", 2);
-                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 9999999, false);
+                    Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 999999, false);
                     Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, -1, false);
                     Game.Session.Puzzle.puzzleStatus.CheckChanges();
                 }
@@ -45,6 +45,16 @@ namespace HP2SpeedrunMod
                     Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, false);
                     Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.STAMINA, 6, true);
                     Game.Session.Puzzle.puzzleStatus.CheckChanges();
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas)
+                {
+                    HP2SR.ShowNotif("Girl Finder Refreshed!", 2);
+                    Game.Persistence.playerFile.PopulateFinderSlots();
+                    Game.Session.gameCanvas.cellphone.LoadOpenApp();
                 }
             }
 
@@ -153,7 +163,53 @@ namespace HP2SpeedrunMod
                         status.Refresh();
                     }
                 }
+
             }
+
+            /*if (Input.GetKey(KeyCode.F9))
+            {
+                Game.Persistence.playerFile.alphaDateCount -= 100;
+
+                float num = 200f;
+                float num2 = 25f;
+                int num3 = Mathf.Min(Game.Persistence.playerFile.relationshipUpCount, 47);
+                if (Game.Persistence.playerFile.storyProgress >= 14 && !Game.Persistence.playerData.unlockedCodes.Contains(Game.Session.Puzzle.noAlphaModeCode))
+                {
+                    num3 += Game.Persistence.playerFile.alphaDateCount + 1;
+                }
+                for (int k = 0; k < num3; k++)
+                {
+                    num += num2;
+                    num2 += 3.3525f;
+                }
+
+                Datamining.Logger.LogDebug((Mathf.RoundToInt(num / 5f) * 5));
+            }
+
+            if (Input.GetKey(KeyCode.F11))
+            {
+                Game.Persistence.playerFile.alphaDateCount += 1000;
+
+                float num = 200f;
+                float num2 = 25f;
+                int num3 = Mathf.Min(Game.Persistence.playerFile.relationshipUpCount, 47);
+                if (Game.Persistence.playerFile.storyProgress >= 14 && !Game.Persistence.playerData.unlockedCodes.Contains(Game.Session.Puzzle.noAlphaModeCode))
+                {
+                    num3 += Game.Persistence.playerFile.alphaDateCount + 1;
+                }
+                for (int k = 0; k < num3; k++)
+                {
+                    num += num2;
+                    num2 += 3.3525f;
+                }
+
+                Datamining.Logger.LogDebug((Mathf.RoundToInt(num / 5f) * 5));
+            }
+
+            if (Input.GetKeyDown(KeyCode.F10))
+            {
+                Game.Persistence.playerFile.alphaDateCount = 35000;
+            }*/
 
             /*
             i should still make a save toggle, on F3?
@@ -198,6 +254,15 @@ namespace HP2SpeedrunMod
                 }
             }
         }
+
+        /*
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlatformManager), "UnlockAchievement")]
+        private static bool NoChievos()
+        {
+            return false;
+        }
+        */
 
         //credit to RShields
         //show relationship points on the girl list
@@ -272,6 +337,7 @@ namespace HP2SpeedrunMod
             {
                 __instance.Depart(Game.Data.Locations.Get(21), null);
                 AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, false);
+                Game.Persistence.playerFile.daytimeElapsed = 8;
                 return false;
             }
             //skip arrival cutscenes for the SIM locations which are 1 through 8
