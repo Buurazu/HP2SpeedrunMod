@@ -204,7 +204,7 @@ namespace HP2SpeedrunMod
                 Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
                 searchForMe = 111;
             }
-                
+
         }
 
         //keep track of the difficulty selection
@@ -288,7 +288,7 @@ namespace HP2SpeedrunMod
             Game.Manager.Audio.FadeOutCategory(AudioCategory.VOICE, 0f);
             Game.Manager.Audio.FadeOutCategory(AudioCategory.MUSIC, 0f);
             Game.Manager.Time.KillTween(____titleTweener, false, true);
-            
+
             Game.Manager.ClearSession();
             SceneManager.LoadScene("TitleScene", LoadSceneMode.Single);
 
@@ -324,6 +324,101 @@ namespace HP2SpeedrunMod
                 return false;
             }
             else return true;
+        }
+
+
+        //Choosing pairs manually
+        //Some code by Lounger
+
+        public static GirlDefinition currentGirl = null;
+        public static AudioKlip click = null, woosh = null;
+        public static UiTooltipSimple tooltip = null;
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCellphoneAppProfile), "Start")]
+        public static void MakeGirlHeadClickable(UiCellphoneAppProfile __instance, UiTooltipSimple ____tooltip)
+        {
+            //enable the Girl Profile head to choose pairs, but only when cheating / using all pairs mod
+            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value)
+            {
+                click = (Game.Session.gameCanvas.cellphone.appPrefabs.FirstOrDefault((UiCellphoneApp a) => a is UiCellphoneAppFinder) as UiCellphoneAppFinder).sfxProfilePressed;
+                woosh = (Game.Session.gameCanvas.cellphone.appPrefabs.FirstOrDefault((UiCellphoneApp a) => a is UiCellphoneAppFinder) as UiCellphoneAppFinder).sfxLocationSelect;
+                __instance.girlHeadButton.Enable();
+                __instance.girlHeadButton.ButtonPressedEvent += BasePatches.OnGirlHeadPressed;
+                tooltip = ____tooltip;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppProfile), "OnGirlHeadEnter")]
+        public static bool ChangeTooltipText(UiCellphoneAppProfile __instance, UiTooltipSimple ____tooltip, PlayerFileGirl ____playerFileGirl)
+        {
+            //enable the Girl Profile head to choose pairs, but only when cheating / using all pairs mod
+            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value)
+            {
+                string text = ____playerFileGirl.girlDefinition.girlName + "'s Profile";
+                text = text + "\nAge: " + ____playerFileGirl.girlDefinition.girlAge.ToString();
+                text = text + "\nClick to visit any\nof this girl's pairs!";
+                ____tooltip.Populate(text, 0, 1f, 1920f);
+                ____tooltip.Show(Vector2.up * 50f, false);
+                return false;
+            }
+            return true;
+        }
+
+        public static void OnGirlHeadPressed(ButtonBehavior b)
+        {
+            tooltip.Hide();
+            Game.Manager.Audio.Play(AudioCategory.SOUND, click, Game.Session.gameCanvas.cellphone.pauseBehavior.pauseDefinition);
+
+            currentGirl = Game.Data.Girls.Get(Game.Session.gameCanvas.cellphone.GetCellFlag("profile_girl_id"));
+            UiCellphoneAppPairs p = (Game.Session.gameCanvas.cellphone.appPrefabs.FirstOrDefault((UiCellphoneApp a) => a is UiCellphoneAppPairs) as UiCellphoneAppPairs);
+            Game.Session.gameCanvas.cellphone.LoadApp(Game.Session.gameCanvas.cellphone.appPrefabs.IndexOf(p));
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppPairs), "Start")]
+        public static bool FindAllHerPairs(UiCellphoneAppPairs __instance)
+        {
+            if (currentGirl != null)
+            {
+                int num = 0;
+
+                List<GirlPairDefinition> stockPairs = Game.Data.GirlPairs.GetAllBySpecial(false);
+                for (int i = 0; i < stockPairs.Count; i++)
+                {
+                    if (stockPairs[i].HasGirlDef(currentGirl))
+                    {
+                        __instance.pairSlots[num].rectTransform.anchoredPosition = new Vector2((float)(num % 4) * 256f, (float)Mathf.FloorToInt((float)num / 4f) * -90f);
+                        __instance.pairSlots[num].Populate(stockPairs[i], null);
+                        __instance.pairSlots[num].profileLinked = true;
+                        __instance.pairSlots[num].PairSlotPressedEvent += BasePatches.OnPairSlotPressed;
+                        __instance.pairSlots[num].button.Enable();
+                        num++;
+                    }
+                }
+                for (int i = num; i < __instance.pairSlots.Length; i++)
+                {
+                    __instance.pairSlots[i].Populate(null, null);
+                }
+                __instance.pairSlotsContainer.anchoredPosition += new Vector2((float)Mathf.Min(num - 1, 3) * -128f, (float)Mathf.Max(Mathf.CeilToInt((float)num / 4f) - 1, 0) * 45f);
+
+                currentGirl = null;
+                return false;
+            }
+            return true;
+        }
+
+        public static void OnPairSlotPressed(UiAppPairSlot pairSlot)
+        {
+            Game.Manager.Audio.Play(AudioCategory.SOUND, woosh, Game.Session.gameCanvas.cellphone.pauseBehavior.pauseDefinition);
+
+            IEnumerable<LocationDefinition> source = from loc in Game.Data.Locations.GetAllByLocationType(LocationType.SIM)
+                                                     where loc != Game.Session.Location.currentLocation
+                                                     select loc;
+            LocationDefinition locationDef = source.ElementAt(UnityEngine.Random.Range(0, source.Count<LocationDefinition>()));
+            Game.Persistence.playerFile.daytimeElapsed++;
+            Game.Session.Location.Depart(locationDef, pairSlot.playerFileGirlPair.girlPairDefinition, false);
         }
     }
 }

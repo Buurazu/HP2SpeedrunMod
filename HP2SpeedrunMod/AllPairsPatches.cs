@@ -52,6 +52,32 @@ namespace HP2SpeedrunMod
                 __instance.itemIcon.sprite = ____girlDefinition.GetHead(false);
             }
         }
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiAppPairSlot), "Refresh")]
+        public static void SpecialCharactersSmallHead2(UiAppPairSlot __instance, PlayerFileGirlPair ____playerFileGirlPair)
+        {
+            GirlDefinition one, two;
+            if (____playerFileGirlPair != null)
+            {
+                one = ____playerFileGirlPair.girlPairDefinition.girlDefinitionOne;
+                two = ____playerFileGirlPair.girlPairDefinition.girlDefinitionTwo;
+
+                //don't need to check sides flipped; it's always false for special girl pairs?
+                if (one.id >= 13)
+                {
+                    __instance.girlHeadOne.sprite = Game.Data.Girls.Get(1).GetHead(true);
+                    __instance.girlHeadOne.SetNativeSize();
+                    __instance.girlHeadOne.sprite = one.GetHead(false);
+                }
+
+                if (two.id >= 13)
+                {
+                    __instance.girlHeadTwo.sprite = Game.Data.Girls.Get(1).GetHead(true);
+                    __instance.girlHeadTwo.SetNativeSize();
+                    __instance.girlHeadTwo.sprite = two.GetHead(false);
+                }
+            }
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(LocationTransition), "Arrive")]

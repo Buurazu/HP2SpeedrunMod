@@ -155,12 +155,25 @@ namespace HP2SpeedrunMod
                 if (Input.GetKeyDown(KeyCode.R))
                 {
                     PlayerFileGirlPair thePair = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Persistence.playerFile.girlPairDefinition);
-                    if (thePair.relationshipType != GirlPairRelationshipType.LOVERS)
+                    if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
                     {
-                        thePair.relationshipType++;
-                        HP2SR.ShowThreeNotif("Relationship Leveled Up to " + thePair.relationshipType + "!");
-                        UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
-                        status.Refresh();
+                        if (thePair.relationshipType != GirlPairRelationshipType.UNKNOWN)
+                        {
+                            thePair.relationshipType--;
+                            HP2SR.ShowThreeNotif("Relationship Leveled Down to " + thePair.relationshipType + "!");
+                            UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
+                            status.Refresh();
+                        }
+                    }
+                    else
+                    {
+                        if (thePair.relationshipType != GirlPairRelationshipType.LOVERS)
+                        {
+                            thePair.relationshipType++;
+                            HP2SR.ShowThreeNotif("Relationship Leveled Up to " + thePair.relationshipType + "!");
+                            UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
+                            status.Refresh();
+                        }
                     }
                 }
 

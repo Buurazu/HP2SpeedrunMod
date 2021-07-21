@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.9";
+        public const string PluginVersion = "1.8.2";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
