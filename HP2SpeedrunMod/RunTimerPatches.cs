@@ -26,6 +26,7 @@ namespace HP2SpeedrunMod
         public static Stopwatch initialTimerDelay = new Stopwatch();
         public static Stopwatch undoTimer = new Stopwatch();
         public static Stopwatch shoeTimer = new Stopwatch();
+        public static Stopwatch savePBDelay = new Stopwatch();
         public static void Update()
         {
             if (!HP2SR.InGameTimer.Value || HP2SR.run == null) return;
@@ -45,6 +46,11 @@ namespace HP2SpeedrunMod
             {
                 shoeTimer.Reset();
                 noMoreShoe = true;
+            }
+            if (savePBDelay.IsRunning && savePBDelay.ElapsedMilliseconds > 5000)
+            {
+                savePBDelay.Reset();
+                run.save();
             }
 
             //checking criterias for non-Wing categories
