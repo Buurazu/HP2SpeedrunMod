@@ -58,6 +58,16 @@ namespace HP2SpeedrunMod
                 }
             }
 
+            if (Input.GetKeyDown(KeyCode.F6))
+            {
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas)
+                {
+                    HP2SR.ShowNotif("Store Refreshed!", 2);
+                    Game.Persistence.playerFile.PopulateStoreProducts();
+                    Game.Session.gameCanvas.cellphone.LoadOpenApp();
+                }
+            }
+
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
                 if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)

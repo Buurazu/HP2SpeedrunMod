@@ -27,6 +27,19 @@ namespace HP2SpeedrunMod
         static string temp = "";
         public static void Update()
         {
+            //pewter mod
+            /*
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas)
+                {
+                    HP2SR.ShowNotif("Store Refreshed!", 2);
+                    Game.Persistence.playerFile.PopulateStoreProducts();
+                    Game.Session.gameCanvas.cellphone.LoadOpenApp();
+                }
+            }
+            */
+
             /*if (Game.Session && Game.Session.Puzzle.puzzleStatus.tokenStatus[5].GetCurrentWeight() < 30)
             {
                 Game.Session.Puzzle.puzzleStatus.tokenStatus[5].AdjustCurrentWeight(1);
@@ -411,6 +424,8 @@ namespace HP2SpeedrunMod
 
         public static void OnPairSlotPressed(UiAppPairSlot pairSlot)
         {
+            //pewter mod
+            //return;
             Game.Manager.Audio.Play(AudioCategory.SOUND, woosh, Game.Session.gameCanvas.cellphone.pauseBehavior.pauseDefinition);
 
             IEnumerable<LocationDefinition> source = from loc in Game.Data.Locations.GetAllByLocationType(LocationType.SIM)
