@@ -23,7 +23,7 @@ namespace HP2SpeedrunMod
         public static void Update()
         {
             //for (KeyCode i = KeyCode.JoystickButton0; i <= KeyCode.JoystickButton19; i++) if (Input.GetKeyDown(i)) Datamining.Logger.LogMessage(i);
-            if (!HP2SR.InputModsEnabled.Value) return;
+            if (!HP2SR.HorizVertEnabled.Value) return;
             prevHoriz = horiz;
             prevVert = vert;
             horiz = Input.GetAxisRaw("Horizontal");

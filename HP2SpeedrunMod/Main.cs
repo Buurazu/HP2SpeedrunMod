@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "1.9";
+        public const string PluginVersion = "2.0";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -32,13 +32,13 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<String> MouseKeys { get; private set; }
         public static ConfigEntry<String> ControllerKeys { get; private set; }
         public static ConfigEntry<KeyboardShortcut> ResetKey { get; private set; }
+        public static ConfigEntry<KeyboardShortcut> ResetKey2 { get; private set; }
+        public static ConfigEntry<KeyboardShortcut> CheatHotkey { get; private set; }
         public static ConfigEntry<Boolean> CensorshipEnabled { get; private set; }
-        public static ConfigEntry<Boolean> CheatHotkeyEnabled { get; private set; }
         public static ConfigEntry<Boolean> AllPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> SpecialPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> MouseWheelEnabled { get; private set; }
         public static ConfigEntry<Boolean> HorizVertEnabled { get; private set; }
-        public static ConfigEntry<Boolean> InputModsEnabled { get; private set; }
         public static ConfigEntry<int> AutoDeleteFile { get; private set; }
         public static ConfigEntry<Boolean> InGameTimer { get; private set; }
         public static ConfigEntry<int> SplitRules { get; private set; }
@@ -80,15 +80,15 @@ namespace HP2SpeedrunMod
 
         private void Awake()
         {
-            ResetKey = Config.Bind(
-                "Settings", nameof(ResetKey),
-                new KeyboardShortcut(KeyCode.F4),
-                "The hotkey to use for going back to the title (set to None to disable)");
-
-            InputModsEnabled = Config.Bind(
-                "Settings", nameof(InputModsEnabled),
+            VsyncEnabled = Config.Bind(
+                "Settings", nameof(VsyncEnabled),
                 true,
-                "Enable or disable all fake clicks (overrides the below settings)");
+                "Enable or disable Vsync. The FPS cap below will only take effect with it disabled");
+            CapAt144 = Config.Bind(
+                "Settings", nameof(CapAt144),
+                true,
+                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster");
+
             MouseWheelEnabled = Config.Bind(
                 "Settings", nameof(MouseWheelEnabled),
                 true,
@@ -106,20 +106,24 @@ namespace HP2SpeedrunMod
                 "JoystickButton0, JoystickButton1, JoystickButton2, JoystickButton3",
                 "The controller buttons that will be treated as a click (set to None for no controller clicks)");
 
+            ResetKey = Config.Bind(
+                "Settings", nameof(ResetKey),
+                new KeyboardShortcut(KeyCode.F4),
+                "The hotkey to use for going back to the title (set to None to disable)");
+            ResetKey2 = Config.Bind(
+                "Settings", nameof(ResetKey2),
+                new KeyboardShortcut(KeyCode.None),
+                "Alternate hotkey to use for going back to the title (set to None to disable)");
+            CheatHotkey = Config.Bind(
+                "Settings", nameof(CheatHotkey),
+                new KeyboardShortcut(KeyCode.C),
+                "The hotkey to use for activating Cheat Mode on the title screen (set to None to disable)");
+
             CensorshipEnabled = Config.Bind(
                 "Settings", nameof(CensorshipEnabled),
                 true,
                 "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
 
-            VsyncEnabled = Config.Bind(
-                "Settings", nameof(VsyncEnabled),
-                true,
-                "Enable or disable Vsync. The FPS cap below will only take effect with it disabled");
-            CapAt144 = Config.Bind(
-                "Settings", nameof(CapAt144),
-                true,
-                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster");
-            
             InGameTimer = Config.Bind(
                 "Settings", nameof(InGameTimer),
                 true,
@@ -138,10 +142,6 @@ namespace HP2SpeedrunMod
                 4,
                 "The file that will be erased on new game if all files are full");
 
-            CheatHotkeyEnabled = Config.Bind(
-                "Settings", nameof(CheatHotkeyEnabled),
-                true,
-                "Enable or disable the cheat hotkey (C on main menu)");
             AllPairsEnabled = Config.Bind(
                 "Settings", nameof(AllPairsEnabled),
                 false,
@@ -188,7 +188,7 @@ namespace HP2SpeedrunMod
             //initiate the variable used for autosplitting
             Harmony.CreateAndPatchAll(typeof(BasePatches), null); BasePatches.InitSearchForMe();
             Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
-            if (InputModsEnabled.Value) Harmony.CreateAndPatchAll(typeof(InputPatches), null);
+            Harmony.CreateAndPatchAll(typeof(InputPatches), null);
             if (InGameTimer.Value) Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
             if (AllPairsEnabled.Value) Harmony.CreateAndPatchAll(typeof(AllPairsPatches), null);
 
@@ -370,7 +370,7 @@ namespace HP2SpeedrunMod
             else tooltipTimer.Reset();
 
             //Check for the Return hotkey
-            if (ResetKey.Value.IsDown())
+            if (ResetKey.Value.IsDown() || ResetKey2.Value.IsDown())
             {
                 if (UnloadGame())
                 {
@@ -558,7 +558,7 @@ namespace HP2SpeedrunMod
                 }
 
                 //check for the Cheat Mode hotkey
-                if (!InputPatches.codeScreen && CheatHotkeyEnabled.Value && cheatsEnabled == false && !isLoading && Input.GetKeyDown(KeyCode.C))
+                if (!InputPatches.codeScreen && cheatsEnabled == false && !isLoading && CheatHotkey.Value.IsDown())
                 {
                     Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxReject);
                     PlayCheatLine();

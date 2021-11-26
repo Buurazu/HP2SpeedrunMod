@@ -151,6 +151,12 @@ namespace HP2SpeedrunMod
                     }
                 }
 
+                //percent sign
+                if (Input.GetKeyDown(KeyCode.Alpha5))
+                {
+                    Datamining.CheckPercentage();
+                }
+
                 if (Input.GetKeyDown(KeyCode.G))
                 {
                     Datamining.GetGirlData();
@@ -398,7 +404,7 @@ namespace HP2SpeedrunMod
                 Datamining.Logger.LogDebug("col = " + col + ", lowest empty slot = " + lowest.row);
         }*/
 
-        /*
+        
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiPuzzleGrid), "StartPuzzle")]
         public static void CheatPuzzle(UiPuzzleGrid __instance)
@@ -428,7 +434,7 @@ namespace HP2SpeedrunMod
                 }
             }
         }
-        */
+        
         //item cheats and tutorial skip and more coming soon
         /*
         public static void AddItem(string theItem, InventoryItemPlayerData[] target = null)

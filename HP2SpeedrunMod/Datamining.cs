@@ -15,6 +15,8 @@ namespace HP2SpeedrunMod
     {
         public static BepInEx.Logging.ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("Datamining");
 
+
+
         public static void ExperimentalAllPairsMod(bool specialsToo = false)
         {
             Dictionary<int, GirlPairDefinition> allPairs = (Dictionary<int, GirlPairDefinition>)AccessTools.Field(typeof(GirlPairData), "_definitions").GetValue(Game.Data.GirlPairs);
@@ -763,6 +765,68 @@ namespace HP2SpeedrunMod
                 }
             }
             Logger.LogDebug(huge);
+        }
+
+        public static void CheckPercentage()
+        {
+            PlayerFile _this = Game.Persistence.playerFile;
+            float num = (float)Mathf.Clamp(_this.storyProgress - 2, 0, 12) * 0.5f;
+            Logger.LogDebug(Mathf.FloorToInt(num));
+            for (int i = 0; i < 4; i++)
+            {
+                num += (float)_this.GetAffectionLevel((PuzzleAffectionType)i, true) * 0.625f;
+            }
+            Logger.LogDebug(Mathf.FloorToInt(num));
+            for (int j = 0; j < _this.girls.Count; j++)
+            {
+                PlayerFileGirl playerFileGirl = _this.girls[j];
+                if (!playerFileGirl.girlDefinition.specialCharacter && playerFileGirl.playerMet)
+                {
+                    num += (float)playerFileGirl.learnedBaggage.Count * 0.25f;
+                    num += (float)playerFileGirl.receivedUniques.Count * 0.125f;
+                    num += (float)playerFileGirl.receivedShoes.Count * 0.125f;
+                    for (int k = 0; k < playerFileGirl.unlockedHairstyles.Count; k++)
+                    {
+                        if (k != playerFileGirl.girlDefinition.defaultHairstyleIndex && k != 6)
+                        {
+                            num += 0.046875f;
+                        }
+                    }
+                    for (int l = 0; l < playerFileGirl.unlockedOutfits.Count; l++)
+                    {
+                        if (l != playerFileGirl.girlDefinition.defaultOutfitIndex && l != 6)
+                        {
+                            num += 0.046875f;
+                        }
+                    }
+                }
+                Logger.LogDebug(playerFileGirl.girlDefinition.girlName + ": " + playerFileGirl.learnedBaggage.Count + "," +
+                    playerFileGirl.receivedUniques.Count + "," + playerFileGirl.receivedShoes.Count + "," +
+                    playerFileGirl.unlockedHairstyles.Count + "," + playerFileGirl.unlockedOutfits.Count);
+                Logger.LogDebug(Mathf.FloorToInt(num));
+            }
+            //Logger.LogDebug(Mathf.FloorToInt(num));
+            for (int m = 0; m < _this.girlPairs.Count; m++)
+            {
+                PlayerFileGirlPair playerFileGirlPair = _this.girlPairs[m];
+                if (!playerFileGirlPair.girlPairDefinition.specialPair)
+                {
+                    GirlPairRelationshipType relationshipType = playerFileGirlPair.relationshipType;
+                    if (relationshipType >= GirlPairRelationshipType.COMPATIBLE)
+                    {
+                        num += 0.25f;
+                    }
+                    if (relationshipType >= GirlPairRelationshipType.ATTRACTED)
+                    {
+                        num += 1f;
+                    }
+                    if (relationshipType >= GirlPairRelationshipType.LOVERS)
+                    {
+                        num += 1f;
+                    }
+                }
+            }
+            Logger.LogDebug(Mathf.FloorToInt(num));
         }
     }
 }

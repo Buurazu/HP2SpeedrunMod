@@ -308,6 +308,24 @@ namespace HP2SpeedrunMod
             return false;
         }
 
+        //replace the title screen copyright/version info with speedrun mod version + game version + vsync info
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCoverArt), "Refresh")]
+        public static void ShowModSettingsInfo(UiCoverArt __instance)
+        {
+            string newText1 = "Speedrun Mod " + HP2SR.PluginVersion + " (Game Version " + Game.Manager.buildVersion + ")";
+            string newText2 = "";
+            if (HP2SR.VsyncEnabled.Value)
+                newText2 += "Vsync On (" + Screen.currentResolution.refreshRate + ")";
+            else if (HP2SR.CapAt144.Value)
+                newText2 += "144 FPS Lock";
+            else
+                newText2 += "60 FPS Lock";
+
+            __instance.versionLabel.text = newText1;
+            __instance.copyrightLabel.text = newText2;
+        }
+
         //prevent being considered unfocused
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]

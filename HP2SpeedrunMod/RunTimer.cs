@@ -29,6 +29,7 @@ namespace HP2SpeedrunMod
         public int runFile;
         public string category;
         public int goal;
+        public bool finishedRun;
         public List<TimeSpan> splits = new List<TimeSpan>();
         public List<bool> isBonus = new List<bool>();
         public List<TimeSpan> comparisonDates = new List<TimeSpan>();
@@ -187,6 +188,7 @@ namespace HP2SpeedrunMod
             goal = -1;
             runTimer = DateTime.UtcNow.Ticks;
             rerollOccurred = false;
+            finishedRun = false;
         }
         public RunTimer(int newFile, int cat, int difficulty) : this()
         {
@@ -324,7 +326,7 @@ namespace HP2SpeedrunMod
                     else goldDates.Add(s);
                 }
             }
-            else //category == ""
+            else if (category == "" && finishedRun == false)
             {
                 //reset the timer for each split if we aren't in a category
                 runTimer = DateTime.UtcNow.Ticks;
@@ -386,7 +388,8 @@ namespace HP2SpeedrunMod
             }
             category = "";
             goal = -1;
-            runTimer = DateTime.UtcNow.Ticks;
+            //runTimer = DateTime.UtcNow.Ticks;
+            finishedRun = true;
         }
 
         //a run has finished; is it faster than our comparison?
