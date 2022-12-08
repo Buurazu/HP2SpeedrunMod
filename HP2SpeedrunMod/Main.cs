@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "2.1";
+        public const string PluginVersion = "2.6";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -34,7 +34,11 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<KeyboardShortcut> ResetKey { get; private set; }
         public static ConfigEntry<KeyboardShortcut> ResetKey2 { get; private set; }
         public static ConfigEntry<KeyboardShortcut> CheatHotkey { get; private set; }
+        public static ConfigEntry<Boolean> CheatSpeedEnabled { get; private set; }
         public static ConfigEntry<Boolean> CensorshipEnabled { get; private set; }
+        public static ConfigEntry<Boolean> OutfitCensorshipEnabled { get; private set; }
+        //public static ConfigEntry<Boolean> BraPantiesCensorshipEnabled { get; private set; }
+        public static ConfigEntry<Boolean> SexSFXCensorshipEnabled { get; private set; }
         public static ConfigEntry<Boolean> AllPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> SpecialPairsEnabled { get; private set; }
         public static ConfigEntry<Boolean> MouseWheelEnabled { get; private set; }
@@ -43,7 +47,8 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<Boolean> InGameTimer { get; private set; }
         public static ConfigEntry<int> SplitRules { get; private set; }
         public static ConfigEntry<Boolean> VsyncEnabled { get; private set; }
-        public static ConfigEntry<Boolean> CapAt144 { get; private set; }
+        public static ConfigEntry<int> FramerateCap { get; private set; }
+        //public static ConfigEntry<Boolean> CapAt144 { get; private set; }
         //public static ConfigEntry<Boolean> RerollForLillian { get; private set; }
 
         //hasReturned is used to display "This is for practice purposes" after a return to main menu, until you start a new file
@@ -84,10 +89,10 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(VsyncEnabled),
                 true,
                 "Enable or disable Vsync. The FPS cap below will only take effect with it disabled");
-            CapAt144 = Config.Bind(
-                "Settings", nameof(CapAt144),
-                true,
-                "Cap the game at 144 FPS. If false, it will cap at 60 FPS instead. 144 FPS could help mash speed, but the higher framerate could mean bonus round affection drains faster");
+            FramerateCap = Config.Bind(
+                "Settings", nameof(FramerateCap),
+                144,
+                "Set your framerate cap when Vsync is off. Valid values: 60, 120, 144, 170, 240, 300, 360. Higher FPS can help max mash speed, but it also means bonus round affection drains faster");
 
             MouseWheelEnabled = Config.Bind(
                 "Settings", nameof(MouseWheelEnabled),
@@ -118,11 +123,23 @@ namespace HP2SpeedrunMod
                 "Settings", nameof(CheatHotkey),
                 new KeyboardShortcut(KeyCode.C),
                 "The hotkey to use for activating Cheat Mode on the title screen (set to None to disable)");
+            CheatSpeedEnabled = Config.Bind(
+                "Settings", nameof(CheatSpeedEnabled),
+                true,
+                "Enable or disable Cheat Mode skipping the tutorial and speeding up transitions");
 
             CensorshipEnabled = Config.Bind(
                 "Settings", nameof(CensorshipEnabled),
                 true,
-                "Enable or disable the extra censorship mods (only active when the in-game setting is Bras & Panties)");
+                "Enable or disable the main censorship mods that make the game SFW (note: all censorship options are only active when the in-game setting is Bras & Panties)");
+            OutfitCensorshipEnabled = Config.Bind(
+                "Settings", nameof(OutfitCensorshipEnabled),
+                true,
+                "Enable or disable risque outfits being replaced with default outfit");
+            SexSFXCensorshipEnabled = Config.Bind(
+                "Settings", nameof(SexSFXCensorshipEnabled),
+                false,
+                "Enable or disable muting girls' moans during Bonus Round");
 
             InGameTimer = Config.Bind(
                 "Settings", nameof(InGameTimer),
@@ -160,10 +177,10 @@ namespace HP2SpeedrunMod
             if (!VsyncEnabled.Value)
             {
                 QualitySettings.vSyncCount = 0;
-                if (CapAt144.Value)
-                    Application.targetFrameRate = 144;
-                else
-                    Application.targetFrameRate = 60;
+                if (FramerateCap.Value != 60 && FramerateCap.Value != 120 && FramerateCap.Value != 144 &&
+                    FramerateCap.Value != 170 && FramerateCap.Value != 240 && FramerateCap.Value != 300 && FramerateCap.Value != 360)
+                    FramerateCap.Value = 144;
+                Application.targetFrameRate = FramerateCap.Value;
             }
 
             //Create the splits files for the first time if they don't exist
@@ -172,7 +189,6 @@ namespace HP2SpeedrunMod
                 System.IO.Directory.CreateDirectory("splits");
                 System.IO.Directory.CreateDirectory("splits/data");
             }
-            RunTimer.ConvertOldSplits();
 
             //Check for a new update
             WebClient client = new WebClient();
@@ -400,13 +416,13 @@ namespace HP2SpeedrunMod
                     //don't allow saving midrun, could be done accidentally
                 }
                 //reset run on Ctrl+R
-                if (Input.GetKeyDown(KeyCode.R) && run != null)
+                if (Input.GetKeyDown(KeyCode.R) && run != null && run.category != "")
                 {
                     run.reset(true);
                     ShowNotif("Run reset!", 2);
                 }
                 //quit run on Ctrl+Q
-                if (Input.GetKeyDown(KeyCode.Q) && run != null)
+                if (Input.GetKeyDown(KeyCode.Q) && run != null && run.category != "")
                 {
                     run.reset(false);
                     ShowNotif("Run quit!", 2);
@@ -521,22 +537,6 @@ namespace HP2SpeedrunMod
                     ShowTooltip("Update Available!\nClick on Credits!", 10000, 0, 45);
                 }
 
-                if (!InputPatches.codeScreen && Input.GetKeyDown(KeyCode.A))
-                {
-                    CodeDefinition codeDefinition = Game.Data.Codes.Get(ABIAHAIR);
-                    if (!Game.Persistence.playerData.unlockedCodes.Contains(codeDefinition))
-                    {
-                        Game.Persistence.playerData.unlockedCodes.Add(codeDefinition);
-                        ShowTooltip("Abia's Hair Enabled!", 2000);
-                    }
-                    else
-                    {
-                        Game.Persistence.playerData.unlockedCodes.Remove(codeDefinition);
-                        ShowTooltip("Abia's Hair Disabled!", 2000);
-                    }
-                    Game.Manager.Ui.currentCanvas.GetComponent<UiTitleCanvas>().coverArt.Refresh();
-                }
-
                 //check for Kyu outfits
                 if (Input.GetKey(KeyCode.K))
                 {
@@ -566,6 +566,24 @@ namespace HP2SpeedrunMod
                     CheatPatches.UnlockAllCodes();
                     ShowTooltip("Cheat Mode Activated!", 2000, 0, 30);
                     cheatsEnabled = true;
+                }
+
+                //check for quick Quick Transitions toggle
+                if (!InputPatches.codeScreen && !isLoading && Input.GetKeyDown(KeyCode.Q))
+                {
+                    Game.Manager.Audio.Play(AudioCategory.SOUND, Game.Manager.Ui.sfxCellphoneNotification);
+                    if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
+                        Game.Manager.Settings.SaveSettings();
+                        ShowTooltip("Quick Transitions Disabled!", 1000, 0, 30);
+                    }
+                    else
+                    {
+                        Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
+                        Game.Manager.Settings.SaveSettings();
+                        ShowTooltip("Quick Transitions Enabled!", 1000, 0, 30);
+                    }
                 }
             }
 

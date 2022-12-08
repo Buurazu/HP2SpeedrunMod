@@ -61,14 +61,21 @@ namespace HP2SpeedrunMod
         public static string GetAll(int cat, int difficulty)
         {
             if (cat >= categories.Length || difficulty >= difficulties.Length) return "N/A";
-            string val = categories[cat] + " " + difficulties[difficulty] + "\nPB: " + GetPB(cat, difficulty) + "\nSoB: " + GetGolds(cat, difficulty);
+            string qt = "";
+            if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                qt = " (QT)";
+            string val = categories[cat] + " " + difficulties[difficulty] + qt + "\nPB: " + GetPB(cat, difficulty) + "\nSoB: " + GetGolds(cat, difficulty);
             return val;
         }
         public static string GetPB(string category, bool chop = true)
         {
             string val = "N/A";
-            string target = "splits/data/" + category + " Dates.txt";
-            string target2 = "splits/data/" + category + " Bonuses.txt";
+            string qt = "";
+            if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                qt = " (QT)";
+            string target = "splits/data/" + category + qt + " Dates.txt";
+            string target2 = "splits/data/" + category + qt + " Bonuses.txt";
+            
             if (File.Exists(target) && File.Exists(target2))
             {
                 TimeSpan s1 = ReadFile(target); TimeSpan s2 = ReadFile(target2);
@@ -87,9 +94,12 @@ namespace HP2SpeedrunMod
         public static string GetGolds(int cat, int difficulty)
         {
             string val = "N/A";
+            string qt = "";
+            if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                qt = " (QT)";
             if (GetPB(cat, difficulty) == "N/A") return val;
-            string target = "splits/data/" + categories[cat] + " " + difficulties[difficulty] + " Dates Golds.txt";
-            string target2 = "splits/data/" + categories[cat] + " " + difficulties[difficulty] + " Bonuses Golds.txt";
+            string target = "splits/data/" + categories[cat] + " " + difficulties[difficulty] + qt + " Dates Golds.txt";
+            string target2 = "splits/data/" + categories[cat] + " " + difficulties[difficulty] + qt + " Bonuses Golds.txt";
             if (File.Exists(target) && File.Exists(target2))
             {
                 TimeSpan s1 = ReadFile(target); TimeSpan s2 = ReadFile(target2);
@@ -97,60 +107,6 @@ namespace HP2SpeedrunMod
             }
             return val;
         }
-        public static void ConvertOldSplits()
-        {
-            for (int c = 0; c < categories.Length; c++)
-            {
-                for (int d = 0; d < difficulties.Length; d++)
-                {
-                    string category = categories[c] + " " + difficulties[d];
-                    string target = "splits/data/" + category + ".txt";
-                    if (File.Exists(target))
-                    {
-                        string target2 = "splits/data/" + category + " Dates.txt";
-                        string target3 = "splits/data/" + category + " Bonuses.txt";
-                        List<TimeSpan> dateSplits = new List<TimeSpan>();
-                        List<TimeSpan> bonusSplits = new List<TimeSpan>();
-                        string[] textFile = File.ReadAllLines(target);
-                        for (int j = 0; j < textFile.Length; j++)
-                        {
-                            TimeSpan t = TimeSpan.Parse(textFile[j]);
-                            if (j > 0) t = t - TimeSpan.Parse(textFile[j - 1]);
-                            if (t.TotalMinutes > 1)
-                            {
-                                dateSplits.Add(t);
-                            }
-                            else bonusSplits.Add(t);
-                        }
-                        File.WriteAllLines(target2, spansToStrings(dateSplits));
-                        File.WriteAllLines(target3, spansToStrings(bonusSplits));
-                        File.Delete(target);
-                    }
-                    target = "splits/data/" + category + " Golds.txt";
-                    if (File.Exists(target))
-                    {
-                        string target2 = "splits/data/" + category + " Dates Golds.txt";
-                        string target3 = "splits/data/" + category + " Bonuses Golds.txt";
-                        List<TimeSpan> dateSplits = new List<TimeSpan>();
-                        List<TimeSpan> bonusSplits = new List<TimeSpan>();
-                        string[] textFile = File.ReadAllLines(target);
-                        for (int j = 0; j < textFile.Length; j++)
-                        {
-                            TimeSpan t = TimeSpan.Parse(textFile[j]);
-                            if (t.TotalMinutes > 1)
-                            {
-                                dateSplits.Add(t);
-                            }
-                            else bonusSplits.Add(t);
-                        }
-                        File.WriteAllLines(target2, spansToStrings(dateSplits));
-                        File.WriteAllLines(target3, spansToStrings(bonusSplits));
-                        File.Delete(target);
-                    }
-                }
-            }
-        }
-
 
         //adds contents of the file to the given list, if provided
         //returns the sum of all found timespans
@@ -200,11 +156,14 @@ namespace HP2SpeedrunMod
                 goal = goals[cat];
 
                 //search for comparison date splits
-                string target = "splits/data/" + category + " Dates.txt"; string target2 = "splits/data/" + category + " Bonuses.txt";
+                string qt = "";
+                if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                    qt = " (QT)";
+                string target = "splits/data/" + category + qt + " Dates.txt"; string target2 = "splits/data/" + category + qt + " Bonuses.txt";
                 ReadFile(target, comparisonDates); ReadFile(target2, comparisonBonuses);
 
                 //search for gold splits
-                target = "splits/data/" + category + " Dates Golds.txt"; target2 = "splits/data/" + category + " Bonuses Golds.txt";
+                target = "splits/data/" + category + qt + " Dates Golds.txt"; target2 = "splits/data/" + category + qt + " Bonuses Golds.txt";
                 ReadFile(target, goldDates); ReadFile(target2, goldBonuses);
             }
             else
@@ -344,7 +303,10 @@ namespace HP2SpeedrunMod
             if (category != "" && saveGolds)
             {
                 //save date and bonus golds separately, but without copying all the code twice lol
-                string[] targets = { "splits/data/" + category + " Dates Golds.txt", "splits/data/" + category + " Bonuses Golds.txt" };
+                string qt = "";
+                if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                    qt = " (QT)";
+                string[] targets = { "splits/data/" + category + qt + " Dates Golds.txt", "splits/data/" + category + qt + " Bonuses Golds.txt" };
                 List<TimeSpan>[] golds = { goldDates, goldBonuses };
                 for (int i = 0; i < targets.Length; i++)
                 {
@@ -384,7 +346,7 @@ namespace HP2SpeedrunMod
                 }
 
                 Logger.LogMessage("writing PB Attempt.txt");
-                File.WriteAllText("splits/" + category + " Last Attempt.txt", finalRunDisplay);
+                File.WriteAllText("splits/" + category + qt + " Last Attempt.txt", finalRunDisplay);
             }
             category = "";
             goal = -1;
@@ -397,7 +359,10 @@ namespace HP2SpeedrunMod
         {
             if (category != "")
             {
-                string target = "splits/data/" + category + " Dates.txt"; string target2 = "splits/data/" + category + " Bonuses.txt";
+                string qt = "";
+                if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
+                    qt = " (QT)";
+                string target = "splits/data/" + category + qt + " Dates.txt"; string target2 = "splits/data/" + category + qt + " Bonuses.txt";
                 //due to the Tutorial, even 48 shoes would have a bonus file
                 if (File.Exists(target) && File.Exists(target2))
                 {
@@ -406,7 +371,7 @@ namespace HP2SpeedrunMod
                     {
                         File.WriteAllLines(target, splitsToStrings(false));
                         File.WriteAllLines(target2, splitsToStrings(true));
-                        File.WriteAllText("splits/" + category + " PB.txt", finalRunDisplay);
+                        File.WriteAllText("splits/" + category + qt + " PB.txt", finalRunDisplay);
                     }
                 }
                 //no PB file, so make one
@@ -414,7 +379,7 @@ namespace HP2SpeedrunMod
                 {
                     File.WriteAllLines(target, splitsToStrings(false));
                     File.WriteAllLines(target2, splitsToStrings(true));
-                    File.WriteAllText("splits/" + category + " PB.txt", finalRunDisplay);
+                    File.WriteAllText("splits/" + category + qt + " PB.txt", finalRunDisplay);
                 }
                 //run is over, so we're no longer on a category
                 reset();

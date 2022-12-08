@@ -10,13 +10,14 @@ namespace HP2SpeedrunMod
 {
     public class CheatPatches
     {
+        static int leftStamina, rightStamina, leftSentiment, rightSentiment, leftPassion, rightPassion, moves = 0;
 
+        public static List<TokenDefinition> tokens = Game.Data.Tokens.GetAll();
+        public static string[] tokenNames =
+            { "Talent", "Flirtation", "Romance", "Sexuality", "Passion", "Broken Heart", "Joy", "Sentiment", "Stamina" };
         public static void Update()
         {
             if (!HP2SR.cheatsEnabled) return;
-            //add the quick transitions code if cheat mode is on
-            if (!Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS)))
-                Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
 
             if (Input.GetKeyDown(KeyCode.F1))
             {
@@ -52,9 +53,47 @@ namespace HP2SpeedrunMod
             {
                 if (!Game.Manager.Ui.currentCanvas.titleCanvas)
                 {
-                    HP2SR.ShowNotif("Girl Finder Refreshed!", 2);
-                    Game.Persistence.playerFile.PopulateFinderSlots();
-                    Game.Session.gameCanvas.cellphone.LoadOpenApp();
+                    if (Game.Session.Location.currentLocation.locationType != LocationType.DATE || Game.Session.gameCanvas.cellphone.isOpen)
+                    {
+                        HP2SR.ShowNotif("Girl Finder Refreshed!", 2);
+                        Game.Persistence.playerFile.PopulateFinderSlots();
+                        Game.Session.gameCanvas.cellphone.LoadOpenApp();
+                    }
+                    else if (Game.Session.Location.currentLocation.locationType == LocationType.DATE && Game.Session.Puzzle.puzzleGrid.roundOver == false)
+                    {
+                        //Restart the current date
+                        //Game.Session.Puzzle.puzzleStatus.NextRound();
+                        //Game.Session.Puzzle.puzzleGrid.EndPuzzle();
+                        //Game.Session.Puzzle.puzzleStatus.Clear();
+                        
+                        Game.Session.Puzzle.puzzleStatus.Reset(Game.Session.Location.currentGirlLeft, Game.Session.Location.currentGirlRight);
+                        Game.Session.Puzzle.puzzleStatus.girlStatusLeft.stamina = leftStamina;
+                        Game.Session.Puzzle.puzzleStatus.girlStatusRight.stamina = rightStamina;
+                        Game.Session.Puzzle.puzzleStatus.girlStatusLeft.sentiment = leftSentiment;
+                        Game.Session.Puzzle.puzzleStatus.girlStatusRight.sentiment = rightSentiment;
+                        Game.Session.Puzzle.puzzleStatus.girlStatusLeft.passion = leftPassion;
+                        Game.Session.Puzzle.puzzleStatus.girlStatusRight.passion = rightPassion;
+                        Game.Session.Puzzle.puzzleStatus.movesRemaining = moves;
+                        Game.Session.Puzzle.puzzleStatus.SetGirlFocusByStamina();
+                        for (int i = 0; i < Game.Session.Puzzle.puzzleGrid.puzzleSlots.Count; i++)
+                        {
+                            UiPuzzleSlot slot = Game.Session.Puzzle.puzzleGrid.puzzleSlots[i];
+                            UiPuzzleToken token = slot.token;
+                            if (token.isWeighted)
+                            {
+                                Game.Session.Puzzle.puzzleStatus.GetTokenInfoByDefinition(token.definition).AdjustCurrentWeight(1);
+                            }
+                            slot.SetToken(null, 0f);
+                            UnityEngine.Object.Destroy(token.gameObject);
+                            //AccessTools.Method(typeof(UiPuzzleGrid), "CreateToken").Invoke(Game.Session.Puzzle.puzzleGrid,
+                            //    new object[] { slot.col, true });
+                            //Game.Session.Puzzle.puzzleGrid.DestroyToken(Game.Session.Puzzle.puzzleGrid.puzzleSlots[i], null, false);
+                        }
+                        Game.Session.Puzzle.puzzleStatus.resourceChanged = true;
+                        Game.Session.Puzzle.puzzleGrid.StartPuzzle();
+                        
+                        //Game.Session.Location.Depart(Game.Session.Location.currentLocation, Game.Session.Location.currentGirlPair, Game.Session.Location.currentSidesFlipped);
+                    }
                 }
             }
 
@@ -70,23 +109,27 @@ namespace HP2SpeedrunMod
 
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
-                if (Input.GetKeyDown(KeyCode.A) && !Game.Manager.Ui.currentCanvas.titleCanvas)
+                if (Input.GetKeyDown(KeyCode.M))
                 {
-                    CodeDefinition abiaHair = Game.Data.Codes.Get(HP2SR.ABIAHAIR);
-                    if (!Game.Persistence.playerData.unlockedCodes.Contains(abiaHair))
+                    if (!InputPatches.mashCheat) HP2SR.ShowThreeNotif("MASH POWER ACTIVATED");
+                    else HP2SR.ShowThreeNotif("Mash power deactivated");
+                    InputPatches.mashCheat = !InputPatches.mashCheat;
+                }
+
+                //Passion/Sentiment/Moves increase/decrease
+                if (!Game.Manager.Ui.currentCanvas.titleCanvas && Game.Session.Location.currentLocation.locationType == LocationType.DATE)
+                {
+                    int mult = 1;
+                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) mult = -1;
+
+                    if (Input.GetKeyDown(KeyCode.P))
                     {
-                        Game.Persistence.playerData.unlockedCodes.Add(abiaHair);
-                        HP2SR.ShowNotif("Abia's hair enabled!", 0);
+                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.PASSION, mult, false);
+                        Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.PASSION, mult, true);
                     }
-                    else
-                    {
-                        Game.Persistence.playerData.unlockedCodes.Remove(abiaHair);
-                        HP2SR.ShowNotif("Abia's hair disabled!", 0);
-                    }
-                    foreach (UiDoll doll in Game.Session.gameCanvas.dolls)
-                    {
-                        if (doll.girlDefinition && doll.girlDefinition.girlName == "Abia") doll.ChangeHairstyle(doll.currentHairstyleIndex);
-                    }
+                    if (Input.GetKeyDown(KeyCode.S)) Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.SENTIMENT, mult, false);
+                    if (Input.GetKeyDown(KeyCode.M)) Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.MOVES, mult, false);
+                    Game.Session.Puzzle.puzzleStatus.CheckChanges();
                 }
 
                 for (int i = (int)KeyCode.Alpha0; i <= (int)KeyCode.Alpha9; i++)
@@ -126,13 +169,6 @@ namespace HP2SpeedrunMod
                         }
                     }
 
-                }
-
-                if (Input.GetKeyDown(KeyCode.M))
-                {
-                    if (!InputPatches.mashCheat) HP2SR.ShowThreeNotif("MASH POWER ACTIVATED");
-                    else HP2SR.ShowThreeNotif("Mash power deactivated");
-                    InputPatches.mashCheat = !InputPatches.mashCheat;
                 }
 
                 if (Input.GetKeyDown(KeyCode.L))
@@ -311,11 +347,13 @@ namespace HP2SpeedrunMod
             //__instance.nameLabel.text = "    " + girlDefinition.GetNickName().ToUpper();
         }
 
-        
+        public static bool weAreSkippingTutorial = false;
         [HarmonyPostfix]
         [HarmonyPatch(typeof(UiCellphoneAppNew), "OnStartButtonPressed")]
         public static void SkipTutorialOnArrival()
         {
+            if (!HP2SR.CheatSpeedEnabled.Value) return;
+            weAreSkippingTutorial = true;
             //skip to inside the airplane, it has special properties
             Game.Persistence.playerFile.locationDefinition = Game.Data.Locations.Get(25);
             //give our first date fruits
@@ -354,6 +392,7 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(UiTitleCanvas), "LoadGame")]
         public static void SkipStoryCutscene(ref string loadSceneName)
         {
+            if (!HP2SR.CheatSpeedEnabled.Value) return;
             if (loadSceneName == "StoryScene") loadSceneName = "MainScene";
         }
 
@@ -361,9 +400,11 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(LocationManager), "OnArrivalComplete")]
         public static bool TutorialAndCutsceneSkips(LocationManager __instance, ref LocationDefinition ____currentLocation, ref CutsceneDefinition ____arrivalCutscene)
         {
+            if (!HP2SR.CheatSpeedEnabled.Value) return true;
             //if arriving to airplane, skip to hub
-            if (____currentLocation.id == 25)
+            if (____currentLocation.id == 25 && weAreSkippingTutorial)
             {
+                weAreSkippingTutorial = false;
                 __instance.Depart(Game.Data.Locations.Get(21), null);
                 AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, false);
                 Game.Persistence.playerFile.daytimeElapsed = 8;
@@ -383,6 +424,7 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(LocationTransition), "Arrive")]
         public static void AlwaysArriveWithGirls(ref bool arriveWithGirls)
         {
+            if (!HP2SR.CheatSpeedEnabled.Value) return;
             if (Game.Session.Location.currentLocation.id <= 8) arriveWithGirls = true;
         }
 
@@ -393,6 +435,62 @@ namespace HP2SpeedrunMod
             Datamining.TestAllPermutations();
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiWindowActionBubbles), "OnActionBubblePressed")]
+        public static void SavingStartingStamina()
+        {
+            leftStamina = Game.Session.Puzzle.puzzleStatus.girlStatusLeft.stamina;
+            rightStamina = Game.Session.Puzzle.puzzleStatus.girlStatusRight.stamina;
+            leftSentiment = Game.Session.Puzzle.puzzleStatus.girlStatusLeft.sentiment;
+            rightSentiment = Game.Session.Puzzle.puzzleStatus.girlStatusRight.sentiment;
+            leftPassion = Game.Session.Puzzle.puzzleStatus.girlStatusLeft.passion;
+            rightPassion = Game.Session.Puzzle.puzzleStatus.girlStatusRight.passion;
+            moves = Game.Session.Puzzle.puzzleStatus.movesRemaining;
+        }
+
+        public static bool skipThisSetProcess = false;
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiPuzzleGrid), "OnTokenDown")]
+        public static bool ChangeTokenType(ref UiPuzzleSlot slot, UiPuzzleGrid __instance)
+        {
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+            {
+                // make power token
+                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                {
+                    slot.token.Upgrade();
+                    return false;
+                }
+                
+                for (int i = 0; i < tokenNames.Length; i++)
+                {
+                    if (tokenNames[i] == slot.token.definition.tokenName)
+                    {
+                        i++;
+                        if (i == tokenNames.Length) i = 0;
+
+                        skipThisSetProcess = true;
+                        __instance.ChangeSlotTokens(new List<UiPuzzleSlot>() { slot },
+                            new List<TokenDefinition>() { tokens[i] }, true, slot.token.upgraded);
+                       
+                        return false;
+                    }
+                }
+                
+            }
+            return true;
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiPuzzleGrid), "ConsumePuzzleSet")]
+        public static bool PreventMatchingAfterTypeSwitch()
+        {
+            if (skipThisSetProcess)
+            {
+                skipThisSetProcess = false;
+                return false;
+            }
+            return true;
+        }
         /*
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiPuzzleGrid), "CreateToken")]
@@ -404,7 +502,7 @@ namespace HP2SpeedrunMod
                 Datamining.Logger.LogDebug("col = " + col + ", lowest empty slot = " + lowest.row);
         }*/
 
-        
+        /*
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiPuzzleGrid), "StartPuzzle")]
         public static void CheatPuzzle(UiPuzzleGrid __instance)
@@ -434,7 +532,8 @@ namespace HP2SpeedrunMod
                 }
             }
         }
-        
+        */
+
         //item cheats and tutorial skip and more coming soon
         /*
         public static void AddItem(string theItem, InventoryItemPlayerData[] target = null)

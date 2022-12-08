@@ -27,6 +27,53 @@ namespace HP2SpeedrunMod
         public static Stopwatch undoTimer = new Stopwatch();
         public static Stopwatch shoeTimer = new Stopwatch();
         public static Stopwatch savePBDelay = new Stopwatch();
+
+        public static void CheckFor100Complete()
+        {
+            RunTimer run = HP2SR.run;
+            if (run == null) return;
+            //checking for 100% completion
+            //Datamining.Logger.LogMessage(Game.Persistence.playerFile.CalculateCompletePercent().ToString());
+            if (run.goal == 100 && Game.Persistence.playerFile.CalculateCompletePercent() == 100)
+            {
+                run.split();
+                string newSplit = "100%\n      " + run.splitText + "\n";
+                run.push(newSplit);
+                run.save();
+                HP2SR.ShowThreeNotif("100% complete! Time: " + run.splitText);
+            }
+        }
+        public static void CheckFor48ShoesComplete()
+        {
+            RunTimer run = HP2SR.run;
+            if (run == null) return;
+            //checking for 48 Shoes completion/progress
+            if (run.goal == 48 && Game.Persistence.playerFile.GetStyleLevelExp() > shoesProgress)
+            {
+                shoesProgress = Game.Persistence.playerFile.GetStyleLevelExp();
+                //split every style level
+                if (shoesProgress % 6 == 0)
+                {
+                    run.split();
+                    justGaveShoe = true;
+                    shoeTimer.Start();
+
+                    string newSplit = "Shoe #" + shoesProgress + "\n      " + run.splitText + "\n";
+                    run.push(newSplit);
+                    if (shoesProgress == 48)
+                    {
+                        run.save();
+                        //let you bask in the glory
+                        shoeTimer.Reset();
+                    }
+                }
+            }
+        }
+        [HarmonyPostfix] [HarmonyPatch(typeof(PlayerFileGirl), "UnlockOutfit")] public static void UnlockOutfit100() { CheckFor100Complete(); }
+        [HarmonyPostfix] [HarmonyPatch(typeof(PlayerFileGirl), "UnlockHairstyle")] public static void UnlockHairstyle100() { CheckFor100Complete(); }
+        [HarmonyPostfix] [HarmonyPatch(typeof(PlayerFileGirl), "ReceiveShoes")] public static void ReceiveShoes100And48() { CheckFor100Complete(); CheckFor48ShoesComplete();  }
+        [HarmonyPostfix] [HarmonyPatch(typeof(PlayerFileGirl), "ReceiveUnique")] public static void ReceiveUnique100() { CheckFor100Complete(); }
+        [HarmonyPostfix] [HarmonyPatch(typeof(PlayerFile), "AddAffectionLevelExp")] public static void Smoothie100() { CheckFor100Complete(); }
         public static void Update()
         {
             if (!HP2SR.InGameTimer.Value || HP2SR.run == null) return;
@@ -52,48 +99,17 @@ namespace HP2SpeedrunMod
                 savePBDelay.Reset();
                 run.save();
             }
-
-            //checking criterias for non-Wing categories
-            if (run.goal == 100 && Game.Persistence.playerFile.CalculateCompletePercent() == 100)
-            {
-                run.split();
-                string newSplit = "100%\n      " + run.splitText + "\n";
-                run.push(newSplit);
-                run.save();
-                HP2SR.ShowThreeNotif("100% completed at " + run.splitText);
-            }
-            else if (run.goal == 48 && Game.Persistence.playerFile.GetStyleLevelExp() > shoesProgress)
-            {
-                shoesProgress = Game.Persistence.playerFile.GetStyleLevelExp();
-                //split every style level
-                if (shoesProgress % 6 == 0)
-                {
-                    run.split();
-                    justGaveShoe = true;
-                    shoeTimer.Start();
-
-                    string newSplit = "Shoe #" + shoesProgress + "\n      " + run.splitText + "\n";
-                    run.push(newSplit);
-                    if (shoesProgress == 48)
-                    {
-                        run.save();
-                        //let you bask in the glory
-                        shoeTimer.Reset();
-                    }
-                }
-            }
         }
 
         //Lillian cheat code, we voted no tho
-        /*
-        public static int rerolls = 0;
+        /*public static int rerolls = 0;
 
         //putting this here since it is gonna check if a 1 Wing run is active
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerFile), "PopulateFinderSlots")]
         public static void LillianCheat(PlayerFile __instance)
         {
-            if (HP2SR.RerollForLillian.Value == false || HP2SR.run == null || HP2SR.run.goal != 1 || __instance.daytimeElapsed != 8)
+            if (HP2SR.run == null || HP2SR.run.goal != 1 ||__instance.daytimeElapsed != 8)
             {
                 return;
             }
@@ -107,6 +123,27 @@ namespace HP2SpeedrunMod
                 __instance.PopulateFinderSlots(); //this will recursively end up calling this same postfix until the pair is there
             }
             rerolls = 0;
+        }*/
+
+        /*
+        //cheat for testing kingcubone's run
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlayerFile), "PopulateFinderSlots")]
+        public static void LillianCheat2(PlayerFile __instance)
+        {
+            if (__instance.daytimeElapsed < 8)
+            {
+                return;
+            }
+
+            PlayerFileFinderSlot theAirport = __instance.GetPlayerFileFinderSlot(Game.Data.Locations.Get(6));
+            theAirport.girlPairDefinition = Game.Data.GirlPairs.Get(5);
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiPuzzleGrid), "Update")]
+        public static void ConsistentFinish()
+        {
+            Game.Session.Puzzle.puzzleStatus.AddResourceValue(PuzzleResourceType.AFFECTION, 5, false);
         }
         */
 

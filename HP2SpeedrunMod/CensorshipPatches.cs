@@ -78,7 +78,7 @@ namespace HP2SpeedrunMod
                 __state = HP2SR.KyuOutfit;
                 outfitIndex = HP2SR.KyuOutfit;
             }
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
+            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value && HP2SR.OutfitCensorshipEnabled.Value)
             {
                 foreach (int i in lewdOutfits[____girlDefinition.id - 1])
                 {
@@ -149,6 +149,18 @@ namespace HP2SpeedrunMod
             if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
             {
                 __instance.buttImage.color = new Color(0, 0, 0, 1);
+            }
+        }
+
+        // mute sex SFX
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(AudioManager), "Play", typeof(AudioCategory), typeof(AudioClip), typeof(PauseDefinition), typeof(float))]
+        public static void SilenceTheMoans(AudioClip audioClip, ref float volume)
+        {
+            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value && HP2SR.SexSFXCensorshipEnabled.Value && audioClip != null)
+            {
+                if (audioClip.name.Contains("vo_sex") || audioClip.name == "vo_scene_opening_1_ashley")
+                    volume = 0f;
             }
         }
     }

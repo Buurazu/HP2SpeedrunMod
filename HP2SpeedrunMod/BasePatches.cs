@@ -88,6 +88,15 @@ namespace HP2SpeedrunMod
                     }
                 }
             }*/
+            /*
+            if (Game.Session)
+            {
+                foreach (PuzzleStatusToken pst in Game.Session.Puzzle.puzzleStatus.tokenStatus)
+                {
+                    Datamining.Logger.LogDebug(pst.tokenDefinition.tokenName + ": " + pst.GetCurrentWeight());
+                }
+            }
+            */
         }
 
         [HarmonyPrefix]
@@ -158,9 +167,9 @@ namespace HP2SpeedrunMod
                 }
             }
             //remove all copies of the quick transitions code on boot
-            while (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) {
+            /*while (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) {
                 Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
-            }
+            }*/
             return false;
         }
 
@@ -214,7 +223,6 @@ namespace HP2SpeedrunMod
             //alert the autosplitter
             if (!HP2SR.cheatsEnabled && !HP2SR.AllPairsEnabled.Value)
             {
-                Game.Persistence.playerData.unlockedCodes.Remove(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
                 searchForMe = 111;
             }
 
@@ -244,7 +252,6 @@ namespace HP2SpeedrunMod
             if (HP2SR.cheatsEnabled) HP2SR.ShowThreeNotif("CHEATS ARE ENABLED");
             else if (HP2SR.hasReturned) HP2SR.ShowThreeNotif("This is for practice purposes only");
             //only display the warning on the Your Apartment location
-            else if (Game.Persistence.playerData.unlockedCodes.Contains(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS))) HP2SR.ShowThreeNotif("Quick Transitions are on, somehow");
             else if (HP2SR.AllPairsEnabled.Value && __instance.currentLocation == Game.Data.Locations.Get(22)) HP2SR.ShowThreeNotif("ALL PAIRS MODE IS ON");
         }
 
@@ -317,10 +324,8 @@ namespace HP2SpeedrunMod
             string newText2 = "";
             if (HP2SR.VsyncEnabled.Value)
                 newText2 += "Vsync On (" + Screen.currentResolution.refreshRate + ")";
-            else if (HP2SR.CapAt144.Value)
-                newText2 += "144 FPS Lock";
             else
-                newText2 += "60 FPS Lock";
+                newText2 += HP2SR.FramerateCap.Value + " FPS Lock";
 
             __instance.versionLabel.text = newText1;
             __instance.copyrightLabel.text = newText2;
