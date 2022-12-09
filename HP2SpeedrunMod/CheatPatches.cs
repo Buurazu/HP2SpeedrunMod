@@ -109,7 +109,7 @@ namespace HP2SpeedrunMod
 
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
-                if (Input.GetKeyDown(KeyCode.M))
+                if (Input.GetKeyDown(KeyCode.M) && (Game.Manager.Ui.currentCanvas.titleCanvas || Game.Session.Location.currentLocation.locationType != LocationType.DATE))
                 {
                     if (!InputPatches.mashCheat) HP2SR.ShowThreeNotif("MASH POWER ACTIVATED");
                     else HP2SR.ShowThreeNotif("Mash power deactivated");

@@ -34,7 +34,8 @@ namespace HP2SpeedrunMod
         {
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
-            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas) return true;
+            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
+                (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) > DEADZONE && Mathf.Abs(prevHoriz) <= DEADZONE) return true;
@@ -51,7 +52,8 @@ namespace HP2SpeedrunMod
         {
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
-            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas) return true;
+            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
+                (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) <= DEADZONE && Mathf.Abs(prevHoriz) > DEADZONE) return true;
@@ -68,7 +70,8 @@ namespace HP2SpeedrunMod
         {
             if (HP2SR.MouseWheelEnabled.Value && Input.GetAxis("Mouse ScrollWheel") != 0) return true;
             if (codeScreen) return false;
-            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas) return true;
+            if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
+                (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) > DEADZONE) return true;
