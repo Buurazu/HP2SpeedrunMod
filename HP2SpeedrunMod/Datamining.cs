@@ -214,6 +214,16 @@ namespace HP2SpeedrunMod
             return questions;
         }
 
+        public static void GetGirlPairNameList()
+        {
+            string s = "";
+            foreach (GirlPairDefinition gpd in Game.Data.GirlPairs.GetAll())
+            {
+                s += "\"" + gpd.girlDefinitionOne.girlName + " & " + gpd.girlDefinitionTwo.girlName + "\", ";
+            }
+            Logger.LogMessage(s);
+        }
+
         public static void GetGirlData()
         {
             //couldn't find a quick way to get these strings so i got them manually

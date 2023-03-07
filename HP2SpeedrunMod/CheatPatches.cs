@@ -48,16 +48,25 @@ namespace HP2SpeedrunMod
                     Game.Session.Puzzle.puzzleStatus.CheckChanges();
                 }
             }
-
+            
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 if (!Game.Manager.Ui.currentCanvas.titleCanvas)
                 {
                     if (Game.Session.Location.currentLocation.locationType != LocationType.DATE || Game.Session.gameCanvas.cellphone.isOpen)
                     {
-                        HP2SR.ShowNotif("Girl Finder Refreshed!", 2);
-                        Game.Persistence.playerFile.PopulateFinderSlots();
-                        Game.Session.gameCanvas.cellphone.LoadOpenApp();
+                        if (Game.Session.gameCanvas.cellphone.openAppIndex == 5)
+                        {
+                            HP2SR.ShowNotif("Store Refreshed!", 2);
+                            Game.Persistence.playerFile.PopulateStoreProducts();
+                        }
+                        else if (Game.Session.gameCanvas.cellphone.openAppIndex == 1)
+                        {
+                            HP2SR.ShowNotif("Girl Finder Refreshed!", 2);
+                            Game.Persistence.playerFile.PopulateFinderSlots();
+                        }
+                        if (Game.Session.gameCanvas.cellphone.isOpen)
+                            Game.Session.gameCanvas.cellphone.LoadOpenApp();
                     }
                     else if (Game.Session.Location.currentLocation.locationType == LocationType.DATE && Game.Session.Puzzle.puzzleGrid.roundOver == false)
                     {
@@ -94,16 +103,6 @@ namespace HP2SpeedrunMod
                         
                         //Game.Session.Location.Depart(Game.Session.Location.currentLocation, Game.Session.Location.currentGirlPair, Game.Session.Location.currentSidesFlipped);
                     }
-                }
-            }
-
-            if (Input.GetKeyDown(KeyCode.F6))
-            {
-                if (!Game.Manager.Ui.currentCanvas.titleCanvas)
-                {
-                    HP2SR.ShowNotif("Store Refreshed!", 2);
-                    Game.Persistence.playerFile.PopulateStoreProducts();
-                    Game.Session.gameCanvas.cellphone.LoadOpenApp();
                 }
             }
 
@@ -195,7 +194,8 @@ namespace HP2SpeedrunMod
 
                 if (Input.GetKeyDown(KeyCode.G))
                 {
-                    Datamining.GetGirlData();
+                    Datamining.GetGirlPairNameList();
+                    //Datamining.GetGirlData();
                 }
 
                 if (Input.GetKeyDown(KeyCode.D))
@@ -226,6 +226,57 @@ namespace HP2SpeedrunMod
                             UiCellphoneAppStatus status = (UiCellphoneAppStatus)AccessTools.Field(typeof(UiCellphone), "_currentApp").GetValue(Game.Session.gameCanvas.cellphone);
                             status.Refresh();
                         }
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.P))
+                {
+                    PlayerFileGirl p1 = Game.Persistence.playerFile.GetPlayerFileGirl(Game.Persistence.playerFile.girlLeftDefinition);
+                    PlayerFileGirl p2 = Game.Persistence.playerFile.GetPlayerFileGirl(Game.Persistence.playerFile.girlRightDefinition);                    
+                    Game.Persistence.playerFile.relationshipPoints += 2;
+                    p1.relationshipPoints += 1;
+                    p2.relationshipPoints += 1;
+                    HP2SR.ShowThreeNotif("Relationship Points Increased by 1!");
+                }
+
+                if (Input.GetKeyDown(KeyCode.O))
+                {
+                    if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    {
+                        for (int i = 0; i < 12; i++)
+                        {
+                            GirlDefinition gd = Game.Data.Girls.Get(i + 1);
+                            PlayerFileGirl playerFileGirl = Game.Persistence.playerFile.GetPlayerFileGirl(gd);
+                            playerFileGirl.hairstyleIndex = HP2SR.hairstylePreferences[gd.girlName].Value;
+                            playerFileGirl.outfitIndex = HP2SR.outfitPreferences[gd.girlName].Value;
+                        }
+                        if (Game.Session.gameCanvas.dollLeft != null)
+                        {
+                            Game.Session.gameCanvas.dollLeft.ChangeHairstyle();
+                            Game.Session.gameCanvas.dollLeft.ChangeOutfit();
+                        }
+                        if (Game.Session.gameCanvas.dollRight != null)
+                        {
+                            Game.Session.gameCanvas.dollRight.ChangeHairstyle();
+                            Game.Session.gameCanvas.dollRight.ChangeOutfit();
+                        }
+
+                        HP2SR.ShowThreeNotif("Hairstyle and outfit preferences loaded!");
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 12; i++)
+                        {
+                            GirlDefinition gd = Game.Data.Girls.Get(i + 1);
+                            PlayerFileGirl playerFileGirl = Game.Persistence.playerFile.GetPlayerFileGirl(gd);
+                            HP2SR.hairstylePreferences[gd.girlName].Value = playerFileGirl.hairstyleIndex;
+                            HP2SR.outfitPreferences[gd.girlName].Value = playerFileGirl.outfitIndex;
+                        }
+                        HP2SR.hairstylePreferences["Kyu"].Value = HP2SR.KyuHairstyle;
+                        HP2SR.outfitPreferences["Kyu"].Value = HP2SR.KyuOutfit;
+                        Game.Persistence.Apply(true);
+                        Game.Persistence.SaveGame();
+                        HP2SR.ShowThreeNotif("Hairstyle and outfit preferences saved!");
                     }
                 }
 
@@ -318,6 +369,7 @@ namespace HP2SpeedrunMod
                     }
                 }
             }
+            Game.Manager.Settings.SaveSettings();
         }
 
         /*
@@ -491,6 +543,123 @@ namespace HP2SpeedrunMod
             }
             return true;
         }
+
+        public static string[] KyuOutfitNames = new string[] { "Rockin' The Merch", "Fairy Uniform", "Galaxy Princess", "Magical Girl", "Nature's Bounty", "Lovely Lust" };
+
+        public static bool InKyuWardrobe = false;
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppWardrobe), "Start")]
+        public static void UnlockShitAndSuch()
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                GirlDefinition gd = Game.Data.Girls.Get(i + 1);
+                PlayerFileGirl playerFileGirl = Game.Persistence.playerFile.GetPlayerFileGirl(gd);
+                for (int j = 0; j < gd.outfits.Count; j++)
+                {
+                    playerFileGirl.UnlockHairstyle(j);
+                    playerFileGirl.UnlockOutfit(j);
+                }
+            }
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiAppStyleSelectList), "Refresh")]
+        public static void PretendPostgamePre(ref int __state)
+        { __state = Game.Persistence.playerFile.storyProgress; Game.Persistence.playerFile.storyProgress = 14; }
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiAppStyleSelectList), "Refresh")]
+        public static void PretendPostgamePost(int __state)
+        { Game.Persistence.playerFile.storyProgress = __state; }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCellphoneAppWardrobe), "Start")]
+        public static void KyuWardrobeMaybe(UiCellphoneAppWardrobe __instance, UiDoll ____wardrobeDoll, ref UiAppFileIconSlot ____selectedFileIconSlot)
+        {
+            InKyuWardrobe = true;
+            //__instance.fileIconSlots.Add(UnityEngine.Object.Instantiate(__instance.fileIconSlots[0]));
+            //Game.Persistence.playerFile.SetFlagValue("wardrobe_girl_id", 13);
+            PlayerFileGirl kyu = Game.Persistence.playerFile.GetPlayerFileGirl(Game.Data.Girls.Get(13));
+            ____wardrobeDoll.LoadGirl(Game.Data.Girls.Get(13), -1, -1, -1, null);
+            __instance.wearOnDatesCheckBox.Populate(false);
+
+            for (int i = 0; i < __instance.selectListHairstyle.listItems.Count; i++)
+            {
+                if (i < KyuOutfitNames.Length)
+                {
+                    __instance.selectListHairstyle.listItems[i].Populate(true, KyuOutfitNames[i], true);
+                    __instance.selectListOutfit.listItems[i].Populate(true, KyuOutfitNames[i], true);
+                }
+                else
+                {
+                    __instance.selectListHairstyle.listItems[i].Populate(false, "???", true);
+                    __instance.selectListOutfit.listItems[i].Populate(false, "???", true);
+                }
+            }
+
+            __instance.selectListHairstyle.Populate(kyu);
+            __instance.selectListOutfit.Populate(kyu);
+
+            ____selectedFileIconSlot.button.Enable();
+            ____selectedFileIconSlot = null;
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppWardrobe), "OnFileIconSlotSelected")]
+        public static void KyuWardrobeOver()
+        {
+            InKyuWardrobe = false;
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiAppStyleSelectList), "Populate")]
+        public static bool KyuWardrobeStuff1(UiAppStyleSelectList __instance, PlayerFileGirl fileGirl, ref PlayerFileGirl ____playerFileGirl, ref UiAppSelectListItem ____selectedListItem)
+        {
+            if (InKyuWardrobe)
+            {
+                ____playerFileGirl = fileGirl;
+                if (!__instance.alternative)
+                {
+                    ____selectedListItem = __instance.listItems[HP2SR.KyuHairstyle];
+                    __instance.listItems[HP2SR.KyuHairstyle].Select(true);
+                }
+                else
+                {
+                    ____selectedListItem = __instance.listItems[HP2SR.KyuOutfit];
+                    __instance.listItems[HP2SR.KyuOutfit].Select(true);
+                }
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiAppStyleSelectList), "OnListItemSelected")]
+        public static bool KyuWardrobeStuff2(UiAppStyleSelectList __instance, ref PlayerFileGirl ____playerFileGirl, UiAppSelectListItem listItem)
+        {
+            if (InKyuWardrobe)
+            {
+                if (!__instance.alternative)
+                {
+                    HP2SR.KyuHairstyle = __instance.listItems.IndexOf(listItem);
+                }
+                else
+                {
+                    HP2SR.KyuOutfit = __instance.listItems.IndexOf(listItem);
+                }
+            }
+            return true;
+        }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiCellphoneAppWardrobe), "Refresh")]
+        public static bool KyuWardrobeStuff3(UiDoll ____wardrobeDoll)
+        {
+            if (InKyuWardrobe)
+            {
+                ____wardrobeDoll.ChangeHairstyle(-1);
+                ____wardrobeDoll.ChangeOutfit(-1);
+                return false;
+            }
+            return true;
+        }
+
         /*
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiPuzzleGrid), "CreateToken")]

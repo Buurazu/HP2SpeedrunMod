@@ -24,7 +24,7 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "2.6.1";
+        public const string PluginVersion = "2.8";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
@@ -48,6 +48,8 @@ namespace HP2SpeedrunMod
         public static ConfigEntry<int> SplitRules { get; private set; }
         public static ConfigEntry<Boolean> VsyncEnabled { get; private set; }
         public static ConfigEntry<int> FramerateCap { get; private set; }
+        public static Dictionary<string, ConfigEntry<int>> hairstylePreferences = new Dictionary<string, ConfigEntry<int>>();
+        public static Dictionary<string, ConfigEntry<int>> outfitPreferences = new Dictionary<string, ConfigEntry<int>>();
         //public static ConfigEntry<Boolean> CapAt144 { get; private set; }
         //public static ConfigEntry<Boolean> RerollForLillian { get; private set; }
 
@@ -79,9 +81,11 @@ namespace HP2SpeedrunMod
         public static bool splitThisDate = false;
         GirlPairRelationshipType startingRelationshipType;
         int startingCompletedPairs;
+        bool dateIsProgress = false;
 
         public static int lastChosenCategory = 0;
         public static int lastChosenDifficulty = 0;
+        public static int swimsuitsChosen = 0;
 
         private void Awake()
         {
@@ -171,6 +175,22 @@ namespace HP2SpeedrunMod
 
         void Start()
         {
+            // Load outfit and hairstyle preferences from the config
+            for (int i = 0; i < 13; i++)
+            {
+                GirlDefinition gd = Game.Data.Girls.Get(i + 1);
+                string hairstyles = gd.girlName + " Hairstyles: ", outfits = gd.girlName + " Outfits: ";
+                for (int j = 0; j < gd.hairstyles.Count; j++)
+                {
+                    hairstyles += j + " = " + gd.hairstyles[j].hairstyleName + ", ";
+                    outfits += j + " = " + gd.outfits[j].outfitName + ", ";
+                }
+                hairstylePreferences.Add(gd.girlName, Config.Bind("Style", gd.girlName + "Hairstyle", gd.defaultHairstyleIndex, hairstyles));
+                outfitPreferences.Add(gd.girlName, Config.Bind("Style", gd.girlName + "Outfit", gd.defaultOutfitIndex, outfits));
+                if (outfitPreferences[gd.girlName].Value == 4) swimsuitsChosen++;
+            }
+            HP2SR.KyuHairstyle = hairstylePreferences["Kyu"].Value;
+            HP2SR.KyuOutfit = outfitPreferences["Kyu"].Value;
             //I can't believe the game doesn't run in background by default
             Application.runInBackground = true;
             //allow max 144fps
@@ -440,6 +460,10 @@ namespace HP2SpeedrunMod
                 {
                     startingRelationshipType = Game.Persistence.playerFile.GetPlayerFileGirlPair(Game.Session.Location.currentGirlPair).relationshipType;
                     startingCompletedPairs = Game.Persistence.playerFile.completedGirlPairs.Count;
+                    dateIsProgress = false;
+                    // The date will cause progress if our relationship is incomplete, or it's a bonus round or the final boss
+                    if (startingRelationshipType < GirlPairRelationshipType.LOVERS || isBonusRound || Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)
+                        dateIsProgress = true;
                 }
                 if (status.affectionMeter.currentValue == status.affectionMeter.maxValue &&
                     (Game.Session.gameCanvas.puzzleGrid.roundState == PuzzleRoundState.SUCCESS || isBonusRound))
@@ -452,8 +476,8 @@ namespace HP2SpeedrunMod
                         {
                             didSplit = run.split(isBonusRound);
                         }
-                        //don't split for dates in 48 Shoes, or in postgame
-                        else if (run.goal != 48 && Game.Persistence.playerFile.storyProgress < 13)
+                        //don't split for dates in 48 Shoes, or if the date isn't progress
+                        else if (run.goal != 48 && dateIsProgress && Game.Persistence.playerFile.storyProgress < 13)
                         {
                             if (run.goal == 1 || SplitRules.Value <= 0) didSplit = run.split(isBonusRound);
                             else if (SplitRules.Value == 1 && !isBonusRound) didSplit = run.split(isBonusRound);
@@ -472,9 +496,7 @@ namespace HP2SpeedrunMod
                             GirlPairDefinition pair = Game.Session.Location.currentGirlPair;
                             int dateNum = 1;
                             if (startingRelationshipType == GirlPairRelationshipType.ATTRACTED) dateNum = 2;
-                            if (isBonusRound) dateNum = 3;
-                            //Kyu pair starts at ATTRACTED (2) and her bonus should be 2, not 3, so this is the easiest way
-                            if (pair.girlDefinitionOne.girlName == "Kyu") dateNum--;
+                            if (pair.girlDefinitionOne.girlName == "Kyu") dateNum = 1;
                             if (Game.Session.Puzzle.puzzleStatus.statusType == PuzzleStatusType.BOSS)
                             {
                                 dateNum = 5 - (Game.Session.Puzzle.puzzleStatus.girlListCount / 2);
@@ -482,8 +504,17 @@ namespace HP2SpeedrunMod
                             string newSplit = pair.girlDefinitionOne.girlName + " & " + pair.girlDefinitionTwo.girlName;
                             //don't put a number on the date if they started as lovers, or it's nonstop mode? (for 100%)
                             //the storyProgress check probably makes this pointless
-                            if (startingRelationshipType != GirlPairRelationshipType.LOVERS
-                            && Game.Session.Puzzle.puzzleStatus.statusType != PuzzleStatusType.NONSTOP) newSplit += " #" + dateNum;
+                            if (isBonusRound) newSplit += " Bonus";
+                            else newSplit += " #" + dateNum;
+
+                            BasePatches.ASLDateNum = dateNum;
+                            BasePatches.ASLPairID = pair.id;
+                            if (isBonusRound)
+                            {
+                                BasePatches.searchForMe = 200;
+                            }
+                            else BasePatches.searchForMe = 100;
+
                             newSplit += "\n      " + run.splitText + "\n";
                             run.push(newSplit);
 
@@ -508,11 +539,7 @@ namespace HP2SpeedrunMod
                         }
                     }
                     
-                    if (isBonusRound)
-                    {
-                        BasePatches.searchForMe = 200;
-                    }
-                    else BasePatches.searchForMe = 100;
+                    
 
                     splitThisDate = true;
                 }

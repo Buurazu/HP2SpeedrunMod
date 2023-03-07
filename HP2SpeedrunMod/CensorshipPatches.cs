@@ -51,6 +51,19 @@ namespace HP2SpeedrunMod
             new int[] { 5 }
         };
 
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UiDoll), "LoadGirl")]
+        public static void testingload(UiDoll __instance, GirlDefinition girlDef, int expressionIndex, ref int hairstyleIndex, ref int outfitIndex, GirlDefinition soulGirlDef)
+        {
+            if (HP2SR.cheatsEnabled) return;
+            if (Game.Session.Location.currentLocation.locationType == LocationType.DATE) return;
+            PlayerFileGirl playerFileGirl = Game.Persistence.playerFile.GetPlayerFileGirl(girlDef);
+            if (hairstyleIndex == -1 && playerFileGirl.hairstyleIndex == girlDef.defaultHairstyleIndex)
+                hairstyleIndex = HP2SR.hairstylePreferences[girlDef.girlName].Value;
+            if (outfitIndex == -1 && playerFileGirl.outfitIndex == girlDef.defaultOutfitIndex)
+                outfitIndex = HP2SR.outfitPreferences[girlDef.girlName].Value;
+        }
+        
         //custom Kyu hairstyle
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiDoll), "ChangeHairstyle")]

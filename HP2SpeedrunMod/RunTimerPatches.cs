@@ -282,6 +282,11 @@ namespace HP2SpeedrunMod
             {
                 HP2SR.run = new RunTimer();
             }
+            if (HP2SR.run.finalRunDisplay == "" && HP2SR.swimsuitsChosen >= 8)
+            {
+                Datamining.Logger.LogMessage("Insane amount of swimsuits detected");
+                HP2SR.run.push("WARNING! This runner is extremely horny!\n\n");
+            }
         }
 
         [HarmonyPostfix]

@@ -17,11 +17,15 @@ namespace HP2SpeedrunMod
     public class BasePatches
     {
         public static int searchForMe;
+        public static int ASLPairID;
+        public static int ASLDateNum;
 
         //for the autosplitter
         public static void InitSearchForMe()
         {
             searchForMe = 123456789;
+            ASLPairID = 1;
+            ASLDateNum = 1;
         }
 
         static string temp = "";
