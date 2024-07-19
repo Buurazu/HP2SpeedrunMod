@@ -64,6 +64,12 @@ namespace HP2SpeedrunMod
             string val = categories[cat] + " " + difficulties[difficulty] + "\nPB: " + GetPB(cat, difficulty) + "\nSoB: " + GetGolds(cat, difficulty);
             return val;
         }
+        public static string GetSome(int cat, int difficulty)
+        {
+            if (cat >= categories.Length || difficulty >= difficulties.Length) return "N/A";
+            string val = "PB: " + GetPB(cat, difficulty) + "\nSoB: " + GetGolds(cat, difficulty);
+            return val;
+        }
         public static string GetPB(string category, bool chop = true)
         {
             string val = "N/A";

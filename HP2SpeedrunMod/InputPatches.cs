@@ -11,8 +11,14 @@ namespace HP2SpeedrunMod
     public class InputPatches
     {
         public static List<KeyCode> mouseKeyboardKeys = new List<KeyCode>();
+        public static List<KeyCode> mashKeys = new List<KeyCode>();
 
         public static float horiz, vert, prevHoriz, prevVert;
+
+        public static float mashTimer;
+        public static bool mashingThisFrame;
+        public static int targetFramerate;
+        public static float mashInterval;
 
         public const float DEADZONE = 0.5f;
 
@@ -36,6 +42,15 @@ namespace HP2SpeedrunMod
             if (codeScreen) return false;
             if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
                 (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
+            
+            if (mashingThisFrame)
+            {
+                for (int i = 0; i < mashKeys.Count; i++)
+                {
+                    if (Input.GetKey(mashKeys[i])) return true;
+                }
+            }
+
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) > DEADZONE && Mathf.Abs(prevHoriz) <= DEADZONE) return true;
@@ -57,6 +72,15 @@ namespace HP2SpeedrunMod
             if (codeScreen) return false;
             if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
                 (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
+
+            if (mashingThisFrame)
+            {
+                for (int i = 0; i < mashKeys.Count; i++)
+                {
+                    if (Input.GetKey(mashKeys[i])) return true;
+                }
+            }
+
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) <= DEADZONE && Mathf.Abs(prevHoriz) > DEADZONE) return true;
@@ -78,6 +102,15 @@ namespace HP2SpeedrunMod
             if (codeScreen) return false;
             if (mashCheat && !Game.Manager.Ui.currentCanvas.titleCanvas &&
                 (Game.Session == null || Game.Session.Location == null || Game.Session.Location.currentLocation == null || Game.Session.Location.currentLocation.locationType != LocationType.DATE)) return true;
+
+            if (mashingThisFrame)
+            {
+                for (int i = 0; i < mashKeys.Count; i++)
+                {
+                    if (Input.GetKey(mashKeys[i])) return true;
+                }
+            }
+
             if (HP2SR.HorizVertEnabled.Value)
             {
                 if (Mathf.Abs(horiz) > DEADZONE) return true;

@@ -15,6 +15,7 @@ namespace HP2SpeedrunMod
         public static List<TokenDefinition> tokens = Game.Data.Tokens.GetAll();
         public static string[] tokenNames =
             { "Talent", "Flirtation", "Romance", "Sexuality", "Passion", "Broken Heart", "Joy", "Sentiment", "Stamina" };
+        public static bool refreshingPuzzle = false;
         public static void Update()
         {
             if (!HP2SR.cheatsEnabled) return;
@@ -74,7 +75,9 @@ namespace HP2SpeedrunMod
                         //Game.Session.Puzzle.puzzleStatus.NextRound();
                         //Game.Session.Puzzle.puzzleGrid.EndPuzzle();
                         //Game.Session.Puzzle.puzzleStatus.Clear();
-                        
+                        if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) refreshingPuzzle = true;
+                        else refreshingPuzzle = false;
+
                         Game.Session.Puzzle.puzzleStatus.Reset(Game.Session.Location.currentGirlLeft, Game.Session.Location.currentGirlRight);
                         Game.Session.Puzzle.puzzleStatus.girlStatusLeft.stamina = leftStamina;
                         Game.Session.Puzzle.puzzleStatus.girlStatusRight.stamina = rightStamina;
@@ -90,7 +93,8 @@ namespace HP2SpeedrunMod
                             UiPuzzleToken token = slot.token;
                             if (token.isWeighted)
                             {
-                                Game.Session.Puzzle.puzzleStatus.GetTokenInfoByDefinition(token.definition).AdjustCurrentWeight(1);
+                                // don't need to do this anymore
+                                //Game.Session.Puzzle.puzzleStatus.GetTokenInfoByDefinition(token.definition).AdjustCurrentWeight(1);
                             }
                             slot.SetToken(null, 0f);
                             UnityEngine.Object.Destroy(token.gameObject);
@@ -423,6 +427,19 @@ namespace HP2SpeedrunMod
             Game.Persistence.playerFile.girls[0].playerMet = true;
             Game.Persistence.playerFile.girls[1].playerMet = true;
             Game.Persistence.playerFile.girls[6].playerMet = true;
+            if (RNGPatches.finderRandom != null)
+            {
+                RNGPatches.finderRandom.Next(); RNGPatches.finderRandom.Next(); RNGPatches.finderRandom.Next();
+            }
+            if (RNGPatches.seedRandom != null)
+            {
+                for (int i = 0; i < 20; i++) RNGPatches.seedRandom.Next();
+            }
+            if (RNGPatches.dateRandom != null)
+            {
+                RNGPatches.dateRandom.Next();
+                RNGPatches.dateRandom.Next();
+            }
             Game.Persistence.playerFile.PushDaytimeTo(ClockDaytimeType.MORNING);
             //gift us the fox plush into slot 1
             Game.Persistence.playerFile.GetPlayerFileInventorySlot(1).itemDefinition = Game.Data.Items.Get(52);
@@ -460,6 +477,8 @@ namespace HP2SpeedrunMod
                 __instance.Depart(Game.Data.Locations.Get(21), null);
                 AccessTools.Field(typeof(GameManager), "_testMode").SetValue(Game.Manager, false);
                 Game.Persistence.playerFile.daytimeElapsed = 8;
+                // check for forcing specific first pair now
+                RNGPatches.LillianOrWhateverCheat(Game.Persistence.playerFile);
                 return false;
             }
             //skip arrival cutscenes for the SIM locations which are 1 through 8
@@ -505,6 +524,7 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(UiPuzzleGrid), "OnTokenDown")]
         public static bool ChangeTokenType(ref UiPuzzleSlot slot, UiPuzzleGrid __instance)
         {
+            skipThisSetProcess = false;
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
                 // make power token

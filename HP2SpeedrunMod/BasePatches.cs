@@ -20,6 +20,10 @@ namespace HP2SpeedrunMod
         public static int ASLPairID;
         public static int ASLDateNum;
 
+        public static string seedText, seedText2;
+
+        public static BepInEx.Logging.ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("BasePatches");
+
         //for the autosplitter
         public static void InitSearchForMe()
         {
@@ -461,6 +465,108 @@ namespace HP2SpeedrunMod
             LocationDefinition locationDef = source.ElementAt(UnityEngine.Random.Range(0, source.Count<LocationDefinition>()));
             Game.Persistence.playerFile.daytimeElapsed++;
             Game.Session.Location.Depart(locationDef, pairSlot.playerFileGirlPair.girlPairDefinition, false);
+        }
+
+
+        // custom sfx
+        public static Dictionary<string, AudioSource> customsPlaying = new Dictionary<string, AudioSource>();
+        public static AudioSource curBGM;
+        public static AudioSource ourBGM;
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(AudioManager), "Play", typeof(AudioCategory), typeof(AudioClip), typeof(PauseDefinition), typeof(float))]
+        public static void ReplaceAnySFX(AudioCategory category, AudioClip audioClip, float volume, AudioLink __result)
+        {
+            if (audioClip == null) return;
+            AudioClip newSFX;
+            AudioSource prevSFX;
+
+            // in case of any issues, stop our BGM whenever a new music track is played
+            if (category == AudioCategory.MUSIC)
+            {
+                if (ourBGM) ourBGM.Stop();
+                ourBGM = null;
+                curBGM = null;
+            }
+
+            if (HP2SR.customSFX.TryGetValue(audioClip.name, out newSFX))
+            {
+                int volSetting = Game.Persistence.playerData.voiceVol;
+                if (category == AudioCategory.SOUND) volSetting = Game.Persistence.playerData.soundVol;
+
+                // Track the currently playing BGM differently
+                if (category == AudioCategory.MUSIC)
+                {
+                    curBGM = __result.audioSource;
+                    curBGM.Pause();
+
+                    AudioSource audioSource = Game.Manager.gameCamera.gameObject.AddComponent<AudioSource>();
+                    audioSource.clip = newSFX;
+                    audioSource.volume = curBGM.volume;
+                    audioSource.loop = true;
+                    audioSource.Play();
+                    ourBGM = audioSource;
+                }
+                else if (customsPlaying.TryGetValue(audioClip.name, out prevSFX))
+                {
+                    prevSFX.volume = volume * (volSetting / 10f);
+                    if (prevSFX.isPlaying) { prevSFX.time = 0; }
+                    else { prevSFX.Play(); }
+                }
+                else
+                {
+                    AudioSource audioSource = Game.Manager.gameCamera.gameObject.AddComponent<AudioSource>();
+                    audioSource.clip = newSFX;
+                    audioSource.volume = volume * (volSetting / 10f);
+                    audioSource.Play();
+                    customsPlaying.Add(audioClip.name, audioSource);
+                }
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(AudioLink), "IsComplete")]
+        public static bool SpoofingBGMStatus(AudioLink __instance, ref bool __result, bool ____fadingOut)
+        {
+            if (__instance.audioSource == curBGM)
+            {
+                __result = (____fadingOut && __instance.audioSource.volume == 0f);
+                if (ourBGM)
+                {
+                    ourBGM.volume = curBGM.volume;
+                    if (__result) ourBGM.Stop();
+                }
+                return false;
+            }
+            return true;
+        }
+
+        //play CG audio
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PhotoDefinition), "GetBigPhotoImage")]
+        public static void ClimaxSFXCheck(PhotoDefinition __instance)
+        {
+            string cgNum = __instance.bigPhotoImages[0].name.Substring(3, 2);
+            if (HP2SR.climaxSFX.ContainsKey(cgNum))
+            {
+                AudioClip newSFX = HP2SR.climaxSFX[cgNum];
+                AudioSource prevSFX;
+
+                if (customsPlaying.TryGetValue(cgNum, out prevSFX))
+                {
+                    prevSFX.volume = Game.Persistence.playerData.soundVol * 0.1f;
+                    if (prevSFX.isPlaying) { prevSFX.time = 0; }
+                    else { prevSFX.Play(); }
+                }
+                else
+                {
+                    AudioSource audioSource = Game.Manager.gameCamera.gameObject.AddComponent<AudioSource>();
+                    audioSource.clip = newSFX;
+                    audioSource.volume *= Game.Persistence.playerData.soundVol * 0.1f;
+                    audioSource.Play();
+                    customsPlaying.Add(cgNum, audioSource);
+                }
+            }
         }
     }
 }

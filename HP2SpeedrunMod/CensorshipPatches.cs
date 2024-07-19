@@ -51,6 +51,63 @@ namespace HP2SpeedrunMod
             new int[] { 5 }
         };
 
+        //taken from Lounger's huniemod
+        public static Texture2D ImageFileToTexture(string filename, bool isEmbeddedResource = false)
+        {
+            byte[] imageData;
+
+            if (isEmbeddedResource)
+            {
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                //Assembly assembly = typeof(SpriteUtil).Assembly; // Replace with the assembly that contains your images, if you want to use embedded ones...
+
+                using (Stream stream = assembly.GetManifestResourceStream(filename))
+                {
+                    if (stream == null)
+                    {
+                        //Logger.LogInfo($"{nameof(SpriteUtil)}.{nameof(ImageFileToTexture)}: Resource does not exist: {filename}");
+                        return null;
+                    }
+                    imageData = new byte[stream.Length];
+                    stream.Read(imageData, 0, (int)stream.Length);
+                }
+            }
+            else
+            {
+                if (!File.Exists(filename))
+                {
+                    //Logger.LogInfo($"{nameof(SpriteUtil)}.{nameof(ImageFileToTexture)}: File does not exist: {filename}");
+                    return null;
+                }
+                using (FileStream stream = File.Open(filename, FileMode.Open, FileAccess.Read))
+                {
+                    imageData = new byte[stream.Length];
+                    stream.Read(imageData, 0, (int)stream.Length);
+                }
+            }
+
+            Texture2D texture = new Texture2D(2, 2, TextureFormat.ARGB32, false);
+
+            if (imageData?.Length > 0)
+            {
+                texture.LoadImage(imageData);
+            }
+
+            return texture;
+        }
+        public static Sprite ImageFileToSprite(string filename, string spriteName, bool isEmbeddedResource = false)
+        {
+            Texture2D texture = ImageFileToTexture(filename, isEmbeddedResource);
+            if (texture == null)
+            {
+                return null;
+            }
+
+            Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100.0f);
+            sprite.name = spriteName; // idk if this matters
+            return sprite;
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(UiDoll), "LoadGirl")]
         public static void testingload(UiDoll __instance, GirlDefinition girlDef, int expressionIndex, ref int hairstyleIndex, ref int outfitIndex, GirlDefinition soulGirlDef)
@@ -133,20 +190,17 @@ namespace HP2SpeedrunMod
         //censorship of large photos, replace with locations
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PhotoDefinition), "GetBigPhotoImage")]
+        [HarmonyPatch(typeof(PhotoDefinition), "GetThumbnailImage")]
         public static bool NoCGsPlease(PhotoDefinition __instance, ref Sprite __result)
         {
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
+            string cgNum = __instance.bigPhotoImages[0].name.Substring(3, 2);
+
+            if (HP2SR.customCG4.ContainsKey(cgNum))
             {
-                __result = Game.Session.Location.currentLocation.backgrounds[0];
+                __result = HP2SR.customCG4[cgNum];
                 return false;
             }
-            else return true;
-        }
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(PhotoDefinition), "GetThumbnailImage")]
-        public static bool NoThumbnailsEither(PhotoDefinition __instance, ref Sprite __result)
-        {
-            if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
+            else if (!Game.Persistence.playerData.uncensored && HP2SR.CensorshipEnabled.Value)
             {
                 __result = Game.Session.Location.currentLocation.backgrounds[0];
                 return false;

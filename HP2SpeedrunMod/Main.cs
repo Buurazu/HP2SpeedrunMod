@@ -24,13 +24,13 @@ namespace HP2SpeedrunMod
         /// <summary>
         /// The version of this plugin.
         /// </summary>
-        public const string PluginVersion = "2.8";
+        public const string PluginVersion = "4.0";
 
         //no item list yet
         //public static Dictionary<string, int> ItemNameList = new Dictionary<string, int>();
 
         public static ConfigEntry<String> MouseKeys { get; private set; }
-        public static ConfigEntry<String> ControllerKeys { get; private set; }
+        public static ConfigEntry<String> MashKeys { get; private set; }
         public static ConfigEntry<KeyboardShortcut> ResetKey { get; private set; }
         public static ConfigEntry<KeyboardShortcut> ResetKey2 { get; private set; }
         public static ConfigEntry<KeyboardShortcut> CheatHotkey { get; private set; }
@@ -87,6 +87,16 @@ namespace HP2SpeedrunMod
         public static int lastChosenDifficulty = 0;
         public static int swimsuitsChosen = 0;
 
+        public static bool seedMode = false;
+        public static string seedString = "";
+        public static string defaultSeed = "";
+        public static bool seedDates = true, seedStore = true, seedFinder = true, seedTalks = true;
+        public static int seedPair = 0;
+
+        public static Dictionary<string, Sprite> customCG4 = new Dictionary<string, Sprite>();
+        public static Dictionary<string, AudioClip> customSFX = new Dictionary<string, AudioClip>();
+        public static Dictionary<string, AudioClip> climaxSFX = new Dictionary<string, AudioClip>();
+
         private void Awake()
         {
             VsyncEnabled = Config.Bind(
@@ -104,16 +114,16 @@ namespace HP2SpeedrunMod
                 "Enable or disable the mouse wheel being treated as a click");
             HorizVertEnabled = Config.Bind(
                 "Settings", nameof(HorizVertEnabled),
-                true,
+                false,
                 "Enable or disable Unity's Horizontal/Vertical axis being treated as a click (this includes WASD, Arrow Keys, and a controller's Left Control Stick)");
             MouseKeys = Config.Bind(
                 "Settings", nameof(MouseKeys),
                 "Q, E",
-                "The keys that will be treated as a click (set to None for no keyboard clicks)\nNote: WASD/arrows are part of the Horizontal/Vertical Axis check");
-            ControllerKeys = Config.Bind(
-                "Settings", nameof(ControllerKeys),
-                "JoystickButton0, JoystickButton1, JoystickButton2, JoystickButton3",
-                "The controller buttons that will be treated as a click (set to None for no controller clicks)");
+                "The keys and controller buttons that will be treated as a click (set to None for no keyboard clicks)");
+            MashKeys = Config.Bind(
+                "Settings", nameof(MashKeys),
+                "None",
+                "The keys and controller buttons that will be treated as clicking rapidly (set to None for no bindings)");
 
             ResetKey = Config.Bind(
                 "Settings", nameof(ResetKey),
@@ -191,6 +201,99 @@ namespace HP2SpeedrunMod
             }
             HP2SR.KyuHairstyle = hairstylePreferences["Kyu"].Value;
             HP2SR.KyuOutfit = outfitPreferences["Kyu"].Value;
+
+            // Load any custom SFX files located in the sfx folder
+            if (Directory.Exists("sfx"))
+            {
+                foreach (string sfxFile in Directory.GetFiles("sfx"))
+                {
+                    string ext = Path.GetExtension(sfxFile).ToLower();
+                    if (ext == ".ogg" || ext == ".wav")
+                    {
+                        string fileName = new Uri(Path.GetFullPath(sfxFile)).AbsoluteUri;
+                        WWW NewSound = new WWW(fileName);
+                        while (!NewSound.isDone) { };
+                        //don't include "sfx\" or the file extension in the dictionary string
+                        customSFX.Add(sfxFile.Substring(4, sfxFile.Length - 8).ToLower(), NewSound.GetAudioClip(false));
+                        Logger.LogMessage("Added " + sfxFile.Substring(4, sfxFile.Length - 8) + " SFX overlay");
+                    }
+                    //else Logger.LogMessage(sfxFile + " is an invalid file extension (use .ogg or .wav)");
+                }
+            }
+            // Load any custom climax images and SFX in the CG4 folder
+            if (Directory.Exists("CG"))
+            {
+                List<GirlPairDefinition> allPairs = Game.Data.GirlPairs.GetAll();
+
+                foreach (string sfxFile in Directory.GetFiles("CG"))
+                {
+                    string ext = Path.GetExtension(sfxFile).ToLower();
+                    string girlNames = sfxFile.Substring(3, sfxFile.Length - 7);
+                    string[] split = girlNames.Split(' ');
+                    string girl1 = split[0];
+                    string girl2 = ""; if (split.Length >= 2) girl2 = split[1];
+                    string moxieNum = ""; if (split.Length >= 3) moxieNum = split[2];
+                    if (ext == ".ogg" || ext == ".wav")
+                    {
+                        string fileName = new Uri(Path.GetFullPath(sfxFile)).AbsoluteUri;
+                        WWW NewSound = new WWW(fileName);
+                        while (!NewSound.isDone) { };
+
+                        if (girlNames == "Kyu")
+                        {
+                            climaxSFX.Add("28", NewSound.GetAudioClip(false));
+                            climaxSFX.Add("29", NewSound.GetAudioClip(false));
+                            climaxSFX.Add("30", NewSound.GetAudioClip(false));
+                            Datamining.Logger.LogMessage("Added " + girlNames + " CG audio");
+                        }
+                        else
+                        {
+                            foreach (GirlPairDefinition g in allPairs)
+                            {
+                                if ((g.girlDefinitionOne.girlName == girl1 || g.girlDefinitionOne.girlName == girl2) && (g.girlDefinitionTwo.girlName == girl1 || g.girlDefinitionTwo.girlName == girl2))
+                                {
+                                    string entry = g.id.ToString();
+                                    if (g.id < 10) entry = "0" + g.id.ToString();
+                                    else if (g.id == 25 && moxieNum != "") entry = (g.id + int.Parse(moxieNum) - 1).ToString(); // Moxie + Jewn
+                                    else if (g.id == 26) entry = "00"; // Kyu + Lola
+                                    climaxSFX.Add(entry, NewSound.GetAudioClip(false));
+                                    Datamining.Logger.LogMessage("Added " + girlNames + " CG audio");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else if (ext == ".png")
+                    {
+                        if (girlNames == "Kyu")
+                        {
+                            customCG4.Add("28", CensorshipPatches.ImageFileToSprite(sfxFile, girlNames));
+                            customCG4.Add("29", CensorshipPatches.ImageFileToSprite(sfxFile, girlNames));
+                            customCG4.Add("30", CensorshipPatches.ImageFileToSprite(sfxFile, girlNames));
+                            Datamining.Logger.LogMessage("Added " + girlNames + " CG replacement");
+                        }
+                        else
+                        {
+                            foreach (GirlPairDefinition g in allPairs)
+                            {
+                                if ((g.girlDefinitionOne.girlName == girl1 || g.girlDefinitionOne.girlName == girl2) && (g.girlDefinitionTwo.girlName == girl1 || g.girlDefinitionTwo.girlName == girl2))
+                                {
+                                    string entry = g.id.ToString();
+                                    if (g.id < 10) entry = "0" + g.id.ToString();
+                                    else if (g.id == 25 && moxieNum != "") entry = (g.id + int.Parse(moxieNum) - 1).ToString(); // Moxie + Jewn
+                                    else if (g.id == 26) entry = "00"; // Kyu + Lola
+                                    customCG4.Add(entry, CensorshipPatches.ImageFileToSprite(sfxFile, girlNames));
+                                    Datamining.Logger.LogMessage("Added " + girlNames + " CG replacement");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    //else Logger.LogMessage(sfxFile + " is an invalid file extension (use .png, .ogg, or .wav)");
+                }
+            }
+
+
             //I can't believe the game doesn't run in background by default
             Application.runInBackground = true;
             //allow max 144fps
@@ -201,7 +304,15 @@ namespace HP2SpeedrunMod
                     FramerateCap.Value != 170 && FramerateCap.Value != 240 && FramerateCap.Value != 300 && FramerateCap.Value != 360)
                     FramerateCap.Value = 144;
                 Application.targetFrameRate = FramerateCap.Value;
+
+                InputPatches.targetFramerate = Application.targetFrameRate;
             }
+            else
+            {
+                InputPatches.targetFramerate = Screen.currentResolution.refreshRate;
+            }
+            //InputPatches.mashInterval = (1.0f / InputPatches.targetFramerate) + 0.0001f;
+            InputPatches.mashInterval = (1.0f / InputPatches.targetFramerate) * 1.1f;
 
             //Create the splits files for the first time if they don't exist
             if (!System.IO.Directory.Exists("splits"))
@@ -225,11 +336,11 @@ namespace HP2SpeedrunMod
             Harmony.CreateAndPatchAll(typeof(BasePatches), null); BasePatches.InitSearchForMe();
             Harmony.CreateAndPatchAll(typeof(CensorshipPatches), null);
             Harmony.CreateAndPatchAll(typeof(InputPatches), null);
+            Harmony.CreateAndPatchAll(typeof(RNGPatches), null);
             if (InGameTimer.Value) Harmony.CreateAndPatchAll(typeof(RunTimerPatches), null);
             if (AllPairsEnabled.Value) Harmony.CreateAndPatchAll(typeof(AllPairsPatches), null);
 
-            string both = MouseKeys.Value + "," + ControllerKeys.Value;
-            string[] keys = both.Split(',');
+            string[] keys = MouseKeys.Value.Split(',');
             string validKeycodes = "Mouse button bound to keys/buttons: ";
             for (int i = 0; i < keys.Length; i++)
             {
@@ -243,6 +354,24 @@ namespace HP2SpeedrunMod
                 if (kc != KeyCode.None)
                 {
                     InputPatches.mouseKeyboardKeys.Add(kc);
+                    validKeycodes += keys[i] + ", ";
+                }
+            }
+
+            keys = MashKeys.Value.Split(',');
+            validKeycodes += "\nMashing bound to keys/buttons: ";
+            for (int i = 0; i < keys.Length; i++)
+            {
+                keys[i] = keys[i].Trim();
+                KeyCode kc = KeyCode.None;
+                try
+                {
+                    kc = (KeyCode)System.Enum.Parse(typeof(KeyCode), keys[i]);
+                }
+                catch { Logger.LogMessage(keys[i] + " is not a valid keycode name!"); }
+                if (kc != KeyCode.None)
+                {
+                    InputPatches.mashKeys.Add(kc);
                     validKeycodes += keys[i] + ", ";
                 }
             }
@@ -393,6 +522,15 @@ namespace HP2SpeedrunMod
             if (!Game.Manager) return; //don't run update code before Game.Manager exists
             BasePatches.Update(); CheatPatches.Update(); InputPatches.Update(); RunTimerPatches.Update();
 
+            InputPatches.mashTimer += Time.deltaTime;
+            InputPatches.mashingThisFrame = false;
+            if (InputPatches.mashTimer > InputPatches.mashInterval)
+            {
+                InputPatches.mashTimer -= InputPatches.mashInterval;
+                InputPatches.mashingThisFrame = true;
+            }
+            if (InputPatches.mashTimer > InputPatches.mashInterval) InputPatches.mashTimer = InputPatches.mashInterval;
+
             if (tooltip != null)
             {
                 if (tooltipTimer.ElapsedMilliseconds > tooltipLength)
@@ -422,8 +560,8 @@ namespace HP2SpeedrunMod
 
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
             {
-                //display the splits folder on Ctrl+S
-                if (Input.GetKeyDown(KeyCode.S))
+                //display the splits folder on Ctrl+F for folder I guess idk
+                if (Input.GetKeyDown(KeyCode.F))
                 {
                     if (Game.Manager.Ui.currentCanvas.titleCanvas)
                         System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "/splits");
@@ -610,6 +748,79 @@ namespace HP2SpeedrunMod
                         Game.Persistence.playerData.unlockedCodes.Add(Game.Data.Codes.Get(HP2SR.QUICKTRANSITIONS));
                         Game.Manager.Settings.SaveSettings();
                         ShowTooltip("Quick Transitions Enabled!", 1000, 0, 30);
+                    }
+                }
+
+                //Read minus, numbers, and backspace input for the seed string
+                if (seedMode)
+                {
+                    //Read Shift+DGST for toggling specific RNG manips
+                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    {
+                        if (Input.GetKeyDown(KeyCode.D)) seedDates = !seedDates;
+                        if (Input.GetKeyDown(KeyCode.F)) seedFinder = !seedFinder;
+                        if (Input.GetKeyDown(KeyCode.S)) seedStore = !seedStore;
+                        if (Input.GetKeyDown(KeyCode.T)) seedTalks = !seedTalks;
+                        if (Input.GetKeyDown(KeyCode.P)) seedPair++;
+                        seedPair = seedPair % 7;
+                    }
+                    if (Input.GetKeyDown(KeyCode.Backspace) && seedString != "")
+                    {
+                        seedString = seedString.Remove(seedString.Length - 1, 1);
+                    }
+                    for (int i = 0; i <= 9; i++)
+                    {
+                        if (Input.GetKeyDown(KeyCode.Alpha0 + i))
+                        {
+                            string temp = seedString + i.ToString();
+                            long temp2 = long.Parse(temp);
+                            if (temp2 < int.MaxValue)
+                                seedString = temp;
+                        }
+                    }
+                    string seedText = "Seed: ";
+                    if (seedString != "") seedText += seedString;
+                    else seedText += defaultSeed;
+
+                    string seedText2 = "";
+                    if (seedPair > 0) seedText2 += "Day 1 " + RNGPatches.firstPairs[seedPair] + "\n";
+                    if (seedDates) seedText2 += " Dates,";
+                    if (seedFinder) seedText2 += " Finder,";
+                    if (seedStore) seedText2 += " Store,";
+                    if (seedTalks) seedText2 += " Talks,";
+                    if (seedText2 == "") seedText2 = "Seeding Nothing???";
+                    seedText2 = seedText2.TrimEnd(',');
+
+                    BasePatches.seedText = seedText;
+                    BasePatches.seedText2 = seedText2;
+                }
+                else
+                {
+                    BasePatches.seedText = "";
+                    BasePatches.seedText2 = "";
+                }
+                RunTimerPatches.ExternalLabelUpdate();
+
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                {
+                    //seed mode Ctrl+S (default to a syncable one)
+                    if (Input.GetKeyDown(KeyCode.S))
+                    {
+                        {
+                            seedMode = !seedMode;
+                            if (seedMode)
+                            {
+                                RunTimer.difficulties = new string[] { "Easy (Seeded)", "Normal (Seeded)", "Hard (Seeded)" };
+                            }
+                            else
+                            {
+                                RunTimer.difficulties = new string[] { "Easy", "Normal", "Hard" };
+                            }
+                            //RunTimerPatches.UpdateFiles();
+                            //give us a random seed based on the current minute, to help syncing races
+                            int seed = new System.Random((int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute)).Next();
+                            defaultSeed = seed.ToString();
+                        }
                     }
                 }
             }

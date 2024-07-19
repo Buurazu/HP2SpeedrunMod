@@ -238,16 +238,59 @@ namespace HP2SpeedrunMod
         [HarmonyPatch(typeof(UiCellphoneAppNew), "Start")]
         public static void DefaultCategory(UiCellphoneAppNew __instance, ref int ____newSaveFileIndex, ref UiAppFileIconSlot ____selectedFileIconSlot)
         {
-            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value) return;
-
             //default girl head to the last chosen category, show their details on the mouse
             if (____selectedFileIconSlot != null)
                 ____selectedFileIconSlot.button.Enable();
             ____selectedFileIconSlot = __instance.fileIconSlots[HP2SR.lastChosenCategory];
             ____selectedFileIconSlot.button.Disable();
-            HP2SR.ShowTooltip(RunTimer.GetAll(HP2SR.lastChosenCategory, HP2SR.lastChosenDifficulty), 3000, 0, 50);
+
+            //modify the Gender setting to be a Category selector
+            Sprite[] blank = { null };
+            __instance.settingSelectorGender.titleIconSprites = blank;
+            __instance.settingSelectorGender.titleLabelText = "Category";
+            __instance.settingSelectorGender.valueLabel.lineSpacing = 1;
+            __instance.settingSelectorGender.valueLabel.alignment = TextAnchor.UpperCenter;
+            __instance.settingSelectorGender.valueLabel.rectTransform.anchoredPosition += new Vector2(0, 16);
+            __instance.settingSelectorGender.Populate(new List<string>(RunTimer.categories), HP2SR.lastChosenCategory);
+
+            //prepare Polly label
+            __instance.settingSelectorPolly.valueLabel.lineSpacing = 1;
+            __instance.settingSelectorPolly.valueLabel.alignment = TextAnchor.UpperCenter;
+            __instance.settingSelectorPolly.valueLabel.rectTransform.anchoredPosition += new Vector2(0, 16);
 
             __instance.Refresh();
+        }
+
+        // update the text of the option labels with our run time and seed info
+        public static UiAppSettingSelector genderSelector = null;
+        public static UiAppSettingSelector difficultySelector = null;
+        public static UiAppSettingSelector pollySelector = null;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UiCellphoneAppNew), "Refresh")]
+        public static void UpdateLabelText(UiCellphoneAppNew __instance)
+        {
+            HP2SR.lastChosenCategory = __instance.settingSelectorGender.selectedIndex;
+
+            // display seed info in the Polly setting text
+            genderSelector = __instance.settingSelectorGender;
+            difficultySelector = __instance.settingSelectorDifficulty;
+            pollySelector = __instance.settingSelectorPolly;
+            ExternalLabelUpdate();
+        }
+
+        public static void ExternalLabelUpdate()
+        {
+            if (pollySelector == null) return;
+
+            // fix the difficulty list using the wrong text
+            difficultySelector.Populate(new List<string>(RunTimer.difficulties), HP2SR.lastChosenDifficulty);
+            difficultySelector.PopDescriptions(Game.Manager.Settings.GetSettingValueDescs("difficulty", false, 0));
+
+            genderSelector.valueLabel.text = RunTimer.categories[HP2SR.lastChosenCategory] + "\n\n" + RunTimer.GetSome(HP2SR.lastChosenCategory, HP2SR.lastChosenDifficulty);
+
+            string polly = "Innie";
+            if (pollySelector.valueLabel.text.Contains("Outie")) polly = "Outie";
+            pollySelector.valueLabel.text = polly + "\n\n" + BasePatches.seedText + "\n" + BasePatches.seedText2;
         }
 
         //always start a new run, even if cheating
@@ -286,44 +329,6 @@ namespace HP2SpeedrunMod
             {
                 Datamining.Logger.LogMessage("Insane amount of swimsuits detected");
                 HP2SR.run.push("WARNING! This runner is extremely horny!\n\n");
-            }
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(UiCellphoneAppNew), "OnFileIconSlotSelected")]
-        public static void JustCheckingCategory(UiCellphoneAppNew __instance, ref int ____newSaveFileIndex, ref UiAppFileIconSlot ____selectedFileIconSlot)
-        {
-            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value) return;
-            if (____selectedFileIconSlot.girlDefinition.id - 1 < RunTimer.categories.Length)
-                HP2SR.lastChosenCategory = ____selectedFileIconSlot.girlDefinition.id - 1;
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(UiCellphoneAppNew), "OnSettingSelectorChanged")]
-        public static void JustCheckingDifficulty(UiCellphoneAppNew __instance)
-        {
-            if (HP2SR.lastChosenCategory < RunTimer.categories.Length)
-                HP2SR.ShowTooltip(RunTimer.GetAll(HP2SR.lastChosenCategory, HP2SR.lastChosenDifficulty), 3000, 0, 50);
-        }
-
-        //Category tooltips
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(UiAppFileIconSlot), "ShowTooltip")]
-        public static bool CategoryNameDisplay(UiAppFileIconSlot __instance, ref UiTooltipSimple ____tooltip)
-        {
-            if (HP2SR.cheatsEnabled || HP2SR.AllPairsEnabled.Value || !Game.Manager.Ui.currentCanvas.titleCanvas) return true;
-            int cat = __instance.girlDefinition.id - 1;
-            int diff = HP2SR.lastChosenDifficulty;
-            if (cat < RunTimer.categories.Length)
-            {
-                HP2SR.ShowTooltip(RunTimer.GetAll(cat, diff), 3000, 0, 50);
-                return false;
-            }
-            else
-            {
-                HP2SR.tooltip = null;
-                HP2SR.tooltipTimer.Reset();
-                return true;
             }
         }
 
